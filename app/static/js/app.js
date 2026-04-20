@@ -82,6 +82,23 @@
     // Expose closeSidebar for use in nav click handler
     window._closeSidebar = closeSidebar;
 
+    // ── Modal animation helpers ──────────────────
+    function showModal(el) {
+        if (!el) return;
+        el.classList.remove('modal--closing');
+        el.hidden = false;
+    }
+
+    function closeModal(el, onHidden) {
+        if (!el || el.hidden) { if (onHidden) onHidden(); return; }
+        el.classList.add('modal--closing');
+        setTimeout(function () {
+            el.hidden = true;
+            el.classList.remove('modal--closing');
+            if (onHidden) onHidden();
+        }, 180);
+    }
+
     // ── Section tab navigation (dynamic — see renderSidebarNav below) ───
 
     // ── ResumePreview ────────────────────────────
@@ -659,11 +676,17 @@
             if (!hasContent) {
                 this.page.innerHTML = '<p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>';
                 if (indicator) this.page.appendChild(indicator);
+                this.page.classList.remove('page--refreshed');
+                void this.page.offsetWidth;
+                this.page.classList.add('page--refreshed');
                 return;
             }
 
             this.page.innerHTML = html;
             if (indicator) this.page.appendChild(indicator);
+            this.page.classList.remove('page--refreshed');
+            void this.page.offsetWidth;
+            this.page.classList.add('page--refreshed');
         }
     }
 
@@ -708,12 +731,32 @@
     function activateTab(tabName) {
         var tabBtns = document.querySelectorAll('.sidebar-tab-btn');
         var tabPanes = document.querySelectorAll('.sidebar-tab-pane');
+
         tabBtns.forEach(function (btn) {
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
+
+        var exitingPane = null;
         tabPanes.forEach(function (pane) {
-            pane.classList.toggle('active', pane.id === 'tabPane-' + tabName);
+            if (pane.classList.contains('active') && pane.id !== 'tabPane-' + tabName) {
+                exitingPane = pane;
+            }
         });
+
+        function doActivate() {
+            tabPanes.forEach(function (pane) {
+                pane.classList.toggle('active', pane.id === 'tabPane-' + tabName);
+                pane.classList.remove('tab-pane--exit');
+            });
+        }
+
+        if (exitingPane) {
+            exitingPane.classList.add('tab-pane--exit');
+            setTimeout(doActivate, 100);
+        } else {
+            doActivate();
+        }
+
         try { localStorage.setItem(LS_ACTIVE_TAB_KEY, tabName); } catch (e) {}
     }
 
@@ -815,7 +858,30 @@
             if (e.target.closest('.add-btn') ||
                 e.target.closest('.summary-toggle') ||
                 e.target.tagName === 'INPUT') return;
-            var isNowCollapsed = panel.classList.toggle('section-collapsed');
+
+            var body = panel.querySelector('.section-body');
+            var isCollapsed = panel.classList.contains('section-collapsed');
+
+            if (body) {
+                if (isCollapsed) {
+                    var targetH = parseInt(body.dataset.expandedH || '0', 10);
+                    if (targetH > 0) {
+                        body.style.setProperty('--section-body-h', targetH + 'px');
+                    }
+                    panel.classList.remove('section-collapsed');
+                    setTimeout(function () { body.style.removeProperty('--section-body-h'); }, 300);
+                } else {
+                    var h = body.scrollHeight;
+                    body.dataset.expandedH = h;
+                    body.style.setProperty('--section-body-h', h + 'px');
+                    void body.offsetHeight;
+                    panel.classList.add('section-collapsed');
+                }
+            } else {
+                panel.classList.toggle('section-collapsed');
+            }
+
+            var isNowCollapsed = panel.classList.contains('section-collapsed');
             var map = loadCollapsedSections();
             map[panel.id] = isNowCollapsed;
             saveCollapsedSections(map);
