@@ -1,7 +1,10 @@
+import logging
 import os
 import uuid
 
 from flask import Blueprint, Response, current_app, jsonify, render_template, request
+
+logger = logging.getLogger(__name__)
 
 from app.limiter import limiter
 from app.models import default_typography
@@ -40,6 +43,7 @@ def import_resume_linkedin():
         from app.services.linkedin_import import import_linkedin
         data = import_linkedin(text)
     except Exception:
+        logger.exception('linkedin_import_failed')
         return jsonify({'error': 'Failed to parse LinkedIn profile'}), 422
 
     from app.services.parse_confidence import compute_parse_confidence
@@ -47,6 +51,7 @@ def import_resume_linkedin():
 
     resume_id = str(uuid.uuid4())
     save_resume(resume_id, data, default_typography())
+    logger.info('import_complete', extra={'source': 'linkedin', 'resume_id': resume_id, 'confidence': parse_meta.get('score')})
     return jsonify({'id': resume_id, 'data': data, 'parse_meta': parse_meta}), 201
 
 
@@ -65,6 +70,7 @@ def import_resume_text():
         from app.services.pdf_import import import_text
         data = import_text(text)
     except Exception:
+        logger.exception('text_import_failed')
         return jsonify({'error': 'Failed to parse text'}), 422
 
     from app.services.parse_confidence import compute_parse_confidence
@@ -72,6 +78,7 @@ def import_resume_text():
 
     resume_id = str(uuid.uuid4())
     save_resume(resume_id, data, default_typography())
+    logger.info('import_complete', extra={'source': 'text', 'resume_id': resume_id, 'confidence': parse_meta.get('score')})
     return jsonify({'id': resume_id, 'data': data, 'parse_meta': parse_meta}), 201
 
 
@@ -93,17 +100,23 @@ def import_resume():
         return jsonify({'error': 'Unsupported file type; must be PDF or DOCX'}), 415
 
     file_bytes = file.read()
-    if len(file_bytes) > _MAX_IMPORT_BYTES:
+    file_size = len(file_bytes)
+    if file_size > _MAX_IMPORT_BYTES:
+        logger.warning('import_file_too_large', extra={'upload_filename': filename, 'size_bytes': file_size})
         return jsonify({'error': 'File exceeds 10 MB limit'}), 413
 
     is_pdf = ext == 'pdf' or mimetype == 'application/pdf'
+    file_type = 'pdf' if is_pdf else 'docx'
+
+    logger.info('import_started', extra={'upload_filename': filename, 'size_bytes': file_size, 'file_type': file_type})
 
     from app.services.upload_security import cleanup_old_uploads, save_upload, validate_magic_bytes
     if not validate_magic_bytes(file_bytes, is_pdf):
+        logger.warning('import_magic_bytes_mismatch', extra={'upload_filename': filename, 'file_type': file_type})
         return jsonify({'error': 'File content does not match declared type'}), 415
 
     upload_dir = os.path.join(current_app.instance_path, 'uploads')
-    save_upload(upload_dir, file_bytes, 'pdf' if is_pdf else 'docx')
+    save_upload(upload_dir, file_bytes, file_type)
     try:
         cleanup_old_uploads(upload_dir)
     except OSError:
@@ -118,11 +131,15 @@ def import_resume():
             data = import_docx(file_bytes)
     except Exception as exc:
         if isinstance(exc, PasswordProtectedError):
+            logger.warning('import_password_protected', extra={'upload_filename': filename, 'file_type': file_type})
             return jsonify({'error': 'This PDF is password-protected'}), 422
         if isinstance(exc, EmptyFileError):
+            logger.warning('import_empty_file', extra={'upload_filename': filename, 'file_type': file_type})
             return jsonify({'error': 'No text content found'}), 422
         if isinstance(exc, CorruptedFileError):
+            logger.warning('import_corrupted_file', extra={'upload_filename': filename, 'file_type': file_type})
             return jsonify({'error': 'Could not read this file'}), 422
+        logger.exception('import_parse_failed', extra={'upload_filename': filename, 'file_type': file_type})
         return jsonify({'error': 'Failed to parse file'}), 422
 
     from app.services.parse_confidence import compute_parse_confidence
@@ -130,6 +147,13 @@ def import_resume():
 
     resume_id = str(uuid.uuid4())
     save_resume(resume_id, data, default_typography())
+    logger.info('import_complete', extra={
+        'source': file_type,
+        'upload_filename': filename,
+        'size_bytes': file_size,
+        'resume_id': resume_id,
+        'confidence': parse_meta.get('score'),
+    })
     return jsonify({'id': resume_id, 'data': data, 'parse_meta': parse_meta}), 201
 
 
@@ -191,7 +215,9 @@ def get_resume_pdf(resume_id):
         from app.services.pdf_export import export_pdf
         pdf_bytes = export_pdf(data, typography)
     except Exception:
+        logger.exception('pdf_export_failed', extra={'resume_id': resume_id})
         return jsonify({'error': 'PDF generation failed'}), 500
+    logger.info('export_complete', extra={'format': 'pdf', 'resume_id': resume_id, 'size_bytes': len(pdf_bytes)})
     return Response(
         pdf_bytes,
         status=200,
@@ -213,7 +239,9 @@ def get_resume_docx(resume_id):
         from app.services.docx_export import export_docx
         docx_bytes = export_docx(data, typography)
     except Exception:
+        logger.exception('docx_export_failed', extra={'resume_id': resume_id})
         return jsonify({'error': 'DOCX generation failed'}), 500
+    logger.info('export_complete', extra={'format': 'docx', 'resume_id': resume_id, 'size_bytes': len(docx_bytes)})
     name = data.get('header', {}).get('name', 'resume') or 'resume'
     filename = f"{name}-resume.docx"
     return Response(
@@ -429,7 +457,9 @@ def export_pdf_inline():
         from app.services.pdf_export import export_pdf
         pdf_bytes = export_pdf(data, typography)
     except Exception:
+        logger.exception('pdf_export_failed', extra={'resume_id': 'inline'})
         return jsonify({'error': 'PDF generation failed'}), 500
+    logger.info('export_complete', extra={'format': 'pdf', 'resume_id': 'inline', 'size_bytes': len(pdf_bytes)})
     return Response(
         pdf_bytes,
         status=200,
@@ -454,7 +484,9 @@ def export_docx_inline():
         from app.services.docx_export import export_docx
         docx_bytes = export_docx(data, typography)
     except Exception:
+        logger.exception('docx_export_failed', extra={'resume_id': 'inline'})
         return jsonify({'error': 'DOCX generation failed'}), 500
+    logger.info('export_complete', extra={'format': 'docx', 'resume_id': 'inline', 'size_bytes': len(docx_bytes)})
     return Response(
         docx_bytes,
         status=200,
