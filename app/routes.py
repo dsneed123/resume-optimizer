@@ -263,7 +263,7 @@ def _classify_suggestion(message: str, index: int) -> dict:
         section = 'education'
     elif 'skill' in msg_lower:
         section = 'skills'
-    elif any(w in msg_lower for w in ('linkedin', 'contact', 'email', 'phone')):
+    elif any(w in msg_lower for w in ('linkedin', 'contact', 'email', 'phone', 'location')):
         section = 'contact'
     elif 'summary' in msg_lower:
         section = 'summary'
