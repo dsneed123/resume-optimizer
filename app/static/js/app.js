@@ -959,16 +959,21 @@
     var saveSpinnerEl = document.getElementById('saveSpinner');
     var toolbarTitleEl = document.getElementById('toolbarTitle');
     var resumeNameEl = document.getElementById('resumeName');
+    var toolbarResumeNameEl = document.getElementById('toolbarResumeName');
     var resumeMetaInfoEl = document.getElementById('resumeMetaInfo');
 
     function updateToolbarTitle() {
-        if (!toolbarTitleEl) return;
         var name = state.meta.resume_name;
-        if (!name) {
+        var displayName = name;
+        if (!displayName) {
             var fullName = state.data.header && state.data.header.name;
-            name = fullName ? fullName + ' Resume' : 'Untitled Resume';
+            displayName = fullName ? fullName + ' Resume' : '';
         }
-        toolbarTitleEl.textContent = name;
+        if (toolbarTitleEl) toolbarTitleEl.textContent = displayName || 'Untitled Resume';
+        if (toolbarResumeNameEl && document.activeElement !== toolbarResumeNameEl) {
+            toolbarResumeNameEl.value = name || '';
+            toolbarResumeNameEl.placeholder = displayName || 'Untitled Resume';
+        }
     }
 
     function updateResumeMetaInfo() {
@@ -1474,8 +1479,23 @@
     if (resumeNameEl) {
         resumeNameEl.addEventListener('input', function () {
             state.meta.resume_name = resumeNameEl.value;
+            if (toolbarResumeNameEl && document.activeElement !== toolbarResumeNameEl) {
+                toolbarResumeNameEl.value = resumeNameEl.value;
+            }
             updateToolbarTitle();
             scheduleSave();
+        });
+    }
+
+    if (toolbarResumeNameEl) {
+        toolbarResumeNameEl.addEventListener('input', function () {
+            state.meta.resume_name = toolbarResumeNameEl.value;
+            if (resumeNameEl) resumeNameEl.value = toolbarResumeNameEl.value;
+            updateToolbarTitle();
+            scheduleSave();
+        });
+        toolbarResumeNameEl.addEventListener('blur', function () {
+            updateToolbarTitle();
         });
     }
 
@@ -4521,6 +4541,7 @@
                 projOpenStates.length = 0;
                 awardOpenStates.length = 0;
                 if (resumeNameEl) resumeNameEl.value = state.meta.resume_name;
+                if (toolbarResumeNameEl) toolbarResumeNameEl.value = state.meta.resume_name;
                 ['name','email','phone','location','linkedin','website'].forEach(function (f) {
                     var el = document.getElementById(f);
                     if (el) el.value = (state.data.header && state.data.header[f]) ? state.data.header[f] : '';
@@ -4558,6 +4579,7 @@
         projOpenStates.length = 0;
         awardOpenStates.length = 0;
         if (resumeNameEl) resumeNameEl.value = '';
+        if (toolbarResumeNameEl) toolbarResumeNameEl.value = '';
         ['name','email','phone','location','linkedin','website'].forEach(function (f) {
             var el = document.getElementById(f);
             if (el) el.value = '';
