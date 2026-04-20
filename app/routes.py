@@ -268,6 +268,54 @@ def auto_fit_resume(resume_id):
     return jsonify({'typography': adjusted, 'fits': fits, 'page_count': page_count, 'changes': changes})
 
 
+@bp.route('/api/resume/pdf', methods=['POST'])
+def export_pdf_inline():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
+    data = body.get('data')
+    typography = body.get('typography')
+    if data is None or typography is None:
+        return jsonify({'error': 'Body must include "data" and "typography"'}), 400
+    try:
+        from app.services.pdf_export import export_pdf
+        pdf_bytes = export_pdf(data, typography)
+    except Exception:
+        return jsonify({'error': 'PDF generation failed'}), 500
+    return Response(
+        pdf_bytes,
+        status=200,
+        headers={
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="resume.pdf"',
+        },
+    )
+
+
+@bp.route('/api/resume/docx', methods=['POST'])
+def export_docx_inline():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
+    data = body.get('data')
+    typography = body.get('typography')
+    if data is None or typography is None:
+        return jsonify({'error': 'Body must include "data" and "typography"'}), 400
+    try:
+        from app.services.docx_export import export_docx
+        docx_bytes = export_docx(data, typography)
+    except Exception:
+        return jsonify({'error': 'DOCX generation failed'}), 500
+    return Response(
+        docx_bytes,
+        status=200,
+        headers={
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition': 'attachment; filename="resume.docx"',
+        },
+    )
+
+
 @bp.route('/api/resume/<resume_id>', methods=['DELETE'])
 def remove_resume(resume_id):
     try:
