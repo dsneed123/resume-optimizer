@@ -125,6 +125,8 @@
                 }
                 #resumePage .rv-entry-left {
                     font-size: ${t.font_size_body}pt;
+                    flex: 1;
+                    min-width: 0;
                 }
                 #resumePage .rv-entry-title {
                     font-weight: bold;
