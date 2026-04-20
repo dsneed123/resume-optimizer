@@ -890,3 +890,94 @@ body {
 .cert-item.collapsed .cert-item-body {
     display: none;
 }
+
+/* ── Project item cards ────────────────────── */
+.proj-item {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.proj-item.dragging {
+    opacity: 0.4;
+}
+
+.proj-item.drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(79,110,247,0.2);
+}
+
+.proj-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f8f9ff;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+}
+
+.proj-item.collapsed .proj-item-header {
+    border-bottom: none;
+}
+
+.proj-item-label {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.proj-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.proj-toggle-btn,
+.proj-delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 5px;
+    font-size: 11px;
+    border-radius: 3px;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+
+.proj-toggle-btn {
+    color: var(--text-muted);
+}
+
+.proj-toggle-btn:hover {
+    background: var(--border);
+    color: var(--text);
+}
+
+.proj-delete-btn {
+    color: var(--text-muted);
+}
+
+.proj-delete-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.proj-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+}
+
+.proj-item.collapsed .proj-item-body {
+    display: none;
+}

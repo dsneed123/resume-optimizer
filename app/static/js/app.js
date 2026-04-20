@@ -261,7 +261,7 @@
 
             // Projects
             const projects = (d.projects || []).filter(p => p.name);
-            if (projects.length) {
+            if (projects.length && d.show_projects !== false) {
                 html += '<div class="rv-section">';
                 html += '<div class="rv-section-title">Projects</div>';
                 for (const p of projects) {
@@ -334,6 +334,7 @@
             certifications: [],
             show_certifications: true,
             projects: [],
+            show_projects: true,
             awards: [],
         };
     }
@@ -1136,4 +1137,167 @@
     }
 
     renderCertList();
+
+    // ── Projects section ────────────────────────
+    var projOpenStates = [];
+
+    function newProjectEntry() {
+        return { name: '', description: '', technologies: '', url: '' };
+    }
+
+    function buildProjectItem(entry, index) {
+        var item = document.createElement('div');
+        item.className = 'proj-item' + (projOpenStates[index] === false ? ' collapsed' : '');
+        item.dataset.index = String(index);
+        item.draggable = true;
+
+        var label = entry.name || 'New Project';
+        var chevron = projOpenStates[index] === false ? '▸' : '▾';
+
+        item.innerHTML =
+            '<div class="proj-item-header">' +
+                '<span class="drag-handle" title="Drag to reorder">⠿</span>' +
+                '<span class="proj-item-label">' + escHtml(label) + '</span>' +
+                '<div class="proj-item-actions">' +
+                    '<button class="proj-toggle-btn" title="Expand/collapse">' + chevron + '</button>' +
+                    '<button class="proj-delete-btn" title="Delete entry">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="proj-item-body">' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Project Name</label>' +
+                    '<input class="field-input proj-field" data-field="name" type="text" value="' + escHtml(entry.name) + '" placeholder="My Awesome Project">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Description</label>' +
+                    '<input class="field-input proj-field" data-field="description" type="text" value="' + escHtml(entry.description) + '" placeholder="Brief description of the project">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Technologies</label>' +
+                    '<input class="field-input proj-field" data-field="technologies" type="text" value="' + escHtml(entry.technologies) + '" placeholder="Python, React, PostgreSQL">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">URL (optional)</label>' +
+                    '<input class="field-input proj-field" data-field="url" type="text" value="' + escHtml(entry.url) + '" placeholder="https://github.com/user/project">' +
+                '</div>' +
+            '</div>';
+
+        var header = item.querySelector('.proj-item-header');
+        var toggleBtn = item.querySelector('.proj-toggle-btn');
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.proj-delete-btn') || e.target.closest('.drag-handle')) return;
+            var nowCollapsed = item.classList.toggle('collapsed');
+            projOpenStates[index] = !nowCollapsed;
+            toggleBtn.textContent = nowCollapsed ? '▸' : '▾';
+        });
+
+        item.querySelector('.proj-delete-btn').addEventListener('click', function () {
+            if (confirm('Delete this project?')) {
+                state.data.projects.splice(index, 1);
+                projOpenStates.splice(index, 1);
+                renderProjectList();
+                notifyChange();
+            }
+        });
+
+        item.querySelectorAll('.proj-field').forEach(function (input) {
+            input.addEventListener('input', function () {
+                state.data.projects[index][input.dataset.field] = input.value;
+                if (input.dataset.field === 'name') {
+                    item.querySelector('.proj-item-label').textContent = input.value || 'New Project';
+                }
+                notifyChange();
+            });
+        });
+
+        return item;
+    }
+
+    function bindProjectDragDrop() {
+        var listEl = document.getElementById('projectsList');
+        if (!listEl) return;
+        var items = listEl.querySelectorAll('.proj-item');
+        var dragSrcIndex = null;
+
+        items.forEach(function (item) {
+            item.addEventListener('dragstart', function (e) {
+                dragSrcIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', function () {
+                item.classList.remove('dragging');
+                items.forEach(function (i) { i.classList.remove('drag-over'); });
+                dragSrcIndex = null;
+            });
+
+            item.addEventListener('dragover', function (e) {
+                if (dragSrcIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', function () {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dropIndex = parseInt(item.dataset.index);
+                if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    var projs = state.data.projects;
+                    var moved = projs.splice(dragSrcIndex, 1)[0];
+                    projs.splice(dropIndex, 0, moved);
+                    var openMoved = projOpenStates.splice(dragSrcIndex, 1)[0];
+                    projOpenStates.splice(dropIndex, 0, openMoved);
+                    renderProjectList();
+                    notifyChange();
+                }
+                dragSrcIndex = null;
+            });
+        });
+    }
+
+    function renderProjectList() {
+        var listEl = document.getElementById('projectsList');
+        if (!listEl) return;
+
+        if (!state.data.projects.length) {
+            listEl.innerHTML = '<p class="empty-state">No projects added yet.</p>';
+            return;
+        }
+
+        while (projOpenStates.length < state.data.projects.length) projOpenStates.push(true);
+        projOpenStates.length = state.data.projects.length;
+
+        listEl.innerHTML = '';
+        state.data.projects.forEach(function (entry, index) {
+            listEl.appendChild(buildProjectItem(entry, index));
+        });
+
+        bindProjectDragDrop();
+    }
+
+    var projectsVisibleEl = document.getElementById('projectsVisible');
+    if (projectsVisibleEl) {
+        projectsVisibleEl.addEventListener('change', function () {
+            state.data.show_projects = projectsVisibleEl.checked;
+            notifyChange();
+        });
+    }
+
+    var addProjectBtn = document.getElementById('addProject');
+    if (addProjectBtn) {
+        addProjectBtn.addEventListener('click', function () {
+            state.data.projects.push(newProjectEntry());
+            projOpenStates.push(true);
+            renderProjectList();
+            notifyChange();
+        });
+    }
+
+    renderProjectList();
 })();
