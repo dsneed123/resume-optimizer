@@ -104,6 +104,9 @@ def create_app():
         if not hmac.compare_digest(str(token), str(request_token)):
             abort(403)
 
+    from app.limiter import limiter
+    limiter.init_app(app)
+
     from app.routes import bp
     app.register_blueprint(bp)
 
@@ -114,5 +117,16 @@ def create_app():
     @app.errorhandler(413)
     def request_entity_too_large(e):
         return jsonify({'error': 'File exceeds size limit'}), 413
+
+    @app.errorhandler(429)
+    def rate_limit_exceeded(e):
+        resp = jsonify({'error': 'Rate limit exceeded'})
+        resp.status_code = 429
+        retry_after = getattr(e, 'retry_after', None)
+        if retry_after is not None:
+            resp.headers['Retry-After'] = str(int(retry_after.total_seconds()))
+        else:
+            resp.headers['Retry-After'] = '60'
+        return resp
 
     return app

@@ -2,6 +2,7 @@ import uuid
 
 from flask import Blueprint, Response, jsonify, render_template, request
 
+from app.limiter import limiter
 from app.models import default_typography
 from app.services.pdf_import import CorruptedFileError, EmptyFileError, PasswordProtectedError
 from app.services.storage import (
@@ -24,6 +25,7 @@ bp = Blueprint('main', __name__)
 
 
 @bp.route('/api/import/linkedin', methods=['POST'])
+@limiter.limit('5 per minute')
 def import_resume_linkedin():
     body = request.get_json(silent=True)
     if not body or not isinstance(body.get('text'), str):
@@ -48,6 +50,7 @@ def import_resume_linkedin():
 
 
 @bp.route('/api/import/text', methods=['POST'])
+@limiter.limit('5 per minute')
 def import_resume_text():
     body = request.get_json(silent=True)
     if not body or not isinstance(body.get('text'), str):
@@ -72,6 +75,7 @@ def import_resume_text():
 
 
 @bp.route('/api/import', methods=['POST'])
+@limiter.limit('5 per minute')
 def import_resume():
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -150,6 +154,7 @@ def get_resume(resume_id):
 
 
 @bp.route('/api/resume/<resume_id>', methods=['POST'])
+@limiter.limit('30 per minute')
 def update_resume(resume_id):
     body = request.get_json(silent=True)
     if not body:
@@ -164,6 +169,7 @@ def update_resume(resume_id):
 
 
 @bp.route('/api/resume/<resume_id>/pdf', methods=['GET'])
+@limiter.limit('10 per minute')
 def get_resume_pdf(resume_id):
     try:
         data, typography = load_resume(resume_id)
@@ -185,6 +191,7 @@ def get_resume_pdf(resume_id):
 
 
 @bp.route('/api/resume/<resume_id>/docx', methods=['GET'])
+@limiter.limit('10 per minute')
 def get_resume_docx(resume_id):
     try:
         data, typography = load_resume(resume_id)
@@ -397,6 +404,7 @@ def auto_fit_resume(resume_id):
 
 
 @bp.route('/api/resume/pdf', methods=['POST'])
+@limiter.limit('10 per minute')
 def export_pdf_inline():
     body = request.get_json(silent=True)
     if not body:
@@ -421,6 +429,7 @@ def export_pdf_inline():
 
 
 @bp.route('/api/resume/docx', methods=['POST'])
+@limiter.limit('10 per minute')
 def export_docx_inline():
     body = request.get_json(silent=True)
     if not body:
