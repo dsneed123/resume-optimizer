@@ -1,10 +1,16 @@
 import hmac
+import logging
 import os
 import re
 import secrets
+import time
 
-from flask import Flask, abort, jsonify, request, session
+from flask import Flask, abort, g, jsonify, request, session
 from markupsafe import Markup, escape
+
+from app.logging_config import configure_logging
+
+logger = logging.getLogger(__name__)
 
 
 _MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -65,6 +71,8 @@ def _render_inline_md(text):
 
 
 def create_app():
+    configure_logging()
+
     app = Flask(__name__)
     app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB upload limit
@@ -87,6 +95,24 @@ def create_app():
                 session['csrf_token'] = secrets.token_hex(32)
             return session['csrf_token']
         return {'csrf_token': csrf_token}
+
+    @app.before_request
+    def _record_request_start():
+        g.request_start = time.monotonic()
+
+    @app.after_request
+    def _log_request(response):
+        duration_ms = round((time.monotonic() - g.get('request_start', time.monotonic())) * 1000)
+        logger.info(
+            'api_request',
+            extra={
+                'method': request.method,
+                'path': request.path,
+                'status': response.status_code,
+                'duration_ms': duration_ms,
+            },
+        )
+        return response
 
     @app.before_request
     def _csrf_protect():
@@ -112,14 +138,17 @@ def create_app():
 
     @app.errorhandler(403)
     def csrf_error(e):
+        logger.warning('csrf_validation_failed', extra={'path': request.path, 'method': request.method})
         return jsonify({'error': 'CSRF validation failed'}), 403
 
     @app.errorhandler(413)
     def request_entity_too_large(e):
+        logger.warning('upload_too_large', extra={'path': request.path})
         return jsonify({'error': 'File exceeds size limit'}), 413
 
     @app.errorhandler(429)
     def rate_limit_exceeded(e):
+        logger.warning('rate_limit_exceeded', extra={'path': request.path, 'method': request.method})
         resp = jsonify({'error': 'Rate limit exceeded'})
         resp.status_code = 429
         retry_after = getattr(e, 'retry_after', None)
