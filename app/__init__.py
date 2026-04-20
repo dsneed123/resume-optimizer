@@ -1,6 +1,9 @@
+import hmac
 import os
 import re
-from flask import Flask, jsonify
+import secrets
+
+from flask import Flask, abort, jsonify, request, session
 from markupsafe import Markup, escape
 
 
@@ -65,6 +68,7 @@ def create_app():
     app = Flask(__name__)
     app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB upload limit
+    app.config.setdefault('WTF_CSRF_ENABLED', True)
 
     upload_dir = os.path.join(app.instance_path, 'uploads')
     export_dir = os.path.join(app.instance_path, 'exports')
@@ -76,8 +80,36 @@ def create_app():
     app.jinja_env.filters['format_date'] = _format_date
     app.jinja_env.filters['render_inline_md'] = _render_inline_md
 
+    @app.context_processor
+    def _inject_csrf_token():
+        def csrf_token():
+            if 'csrf_token' not in session:
+                session['csrf_token'] = secrets.token_hex(32)
+            return session['csrf_token']
+        return {'csrf_token': csrf_token}
+
+    @app.before_request
+    def _csrf_protect():
+        if app.config.get('TESTING') or not app.config.get('WTF_CSRF_ENABLED', True):
+            return
+        if request.method not in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            return
+        token = session.get('csrf_token')
+        request_token = (
+            request.headers.get('X-CSRFToken')
+            or request.form.get('csrf_token')
+        )
+        if not token or not request_token:
+            abort(403)
+        if not hmac.compare_digest(str(token), str(request_token)):
+            abort(403)
+
     from app.routes import bp
     app.register_blueprint(bp)
+
+    @app.errorhandler(403)
+    def csrf_error(e):
+        return jsonify({'error': 'CSRF validation failed'}), 403
 
     @app.errorhandler(413)
     def request_entity_too_large(e):

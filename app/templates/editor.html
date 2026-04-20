@@ -15,6 +15,7 @@
     <meta property="og:description" content="Optimize your resume with AI-powered suggestions, ATS scoring, and real-time editing tools to land your next job.">
     <meta property="og:type" content="website">
 
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -979,6 +980,21 @@
         </div>
     </div>
 
+    <script>
+    (function () {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = meta ? meta.getAttribute('content') : '';
+        var _origFetch = window.fetch;
+        window.fetch = function (url, options) {
+            options = options || {};
+            var method = (options.method || 'GET').toUpperCase();
+            if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method) !== -1) {
+                options.headers = Object.assign({}, options.headers, {'X-CSRFToken': csrfToken});
+            }
+            return _origFetch.call(this, url, options);
+        };
+    }());
+    </script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
