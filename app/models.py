@@ -136,6 +136,41 @@ def default_resume() -> dict:
     }
 
 
+@dataclass
+class TypographySettings:
+    font_family: str = "Helvetica"
+    font_size_name: float = 20
+    font_size_section_header: float = 12
+    font_size_body: float = 10
+    font_size_detail: float = 9
+    line_height: float = 1.15
+    paragraph_spacing: float = 4
+    section_spacing: float = 10
+    margin_top: float = 0.5
+    margin_bottom: float = 0.5
+    margin_left: float = 0.6
+    margin_right: float = 0.6
+    bullet_indent: float = 12
+
+
+def default_typography() -> dict:
+    return {
+        "font_family": "Helvetica",
+        "font_size_name": 20,
+        "font_size_section_header": 12,
+        "font_size_body": 10,
+        "font_size_detail": 9,
+        "line_height": 1.15,
+        "paragraph_spacing": 4,
+        "section_spacing": 10,
+        "margin_top": 0.5,
+        "margin_bottom": 0.5,
+        "margin_left": 0.6,
+        "margin_right": 0.6,
+        "bullet_indent": 12,
+    }
+
+
 def validate_resume(data: dict) -> list[str]:
     errors = []
 
