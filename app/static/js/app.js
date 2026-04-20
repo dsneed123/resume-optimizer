@@ -874,6 +874,48 @@
             .catch(function () {});
     }
 
+    // ── Confirmation dialog ──────────────────────
+    var confirmModalEl      = document.getElementById('confirmModal');
+    var confirmModalTitle   = document.getElementById('confirmModalTitle');
+    var confirmModalMessage = document.getElementById('confirmModalMessage');
+    var confirmModalOkBtn   = document.getElementById('confirmModalOkBtn');
+    var confirmModalCancel  = document.getElementById('confirmModalCancelBtn');
+    var confirmModalClose   = document.getElementById('confirmModalClose');
+    var _confirmCallback    = null;
+
+    function _closeConfirmModal() {
+        if (confirmModalEl) confirmModalEl.hidden = true;
+        _confirmCallback = null;
+    }
+
+    function confirmDialog(opts, onConfirm) {
+        if (!confirmModalEl) { if (onConfirm && confirm(opts.message)) onConfirm(); return; }
+        if (confirmModalTitle)   confirmModalTitle.textContent   = opts.title   || 'Confirm';
+        if (confirmModalMessage) confirmModalMessage.textContent = opts.message || 'Are you sure?';
+        if (confirmModalOkBtn) {
+            confirmModalOkBtn.textContent = opts.confirmText || 'Confirm';
+            confirmModalOkBtn.className = 'modal-btn ' + (opts.isDanger ? 'modal-btn--danger' : 'modal-btn--primary');
+        }
+        _confirmCallback = onConfirm || null;
+        confirmModalEl.hidden = false;
+        if (confirmModalOkBtn) confirmModalOkBtn.focus();
+    }
+
+    if (confirmModalOkBtn) {
+        confirmModalOkBtn.addEventListener('click', function () {
+            var cb = _confirmCallback;
+            _closeConfirmModal();
+            if (cb) cb();
+        });
+    }
+    if (confirmModalCancel)  confirmModalCancel.addEventListener('click',  _closeConfirmModal);
+    if (confirmModalClose)   confirmModalClose.addEventListener('click',   _closeConfirmModal);
+    if (confirmModalEl) {
+        confirmModalEl.addEventListener('click', function (e) {
+            if (e.target === confirmModalEl) _closeConfirmModal();
+        });
+    }
+
     function notifyChange() {
         preview.update(state.data, state.typo);
         schedulePageCheck();
@@ -1340,13 +1382,18 @@
         });
 
         item.querySelector('.exp-delete-btn').addEventListener('click', function () {
-            if (confirm('Delete this experience entry?')) {
+            confirmDialog({
+                title: 'Delete Experience',
+                message: 'Delete this experience entry? This cannot be undone.',
+                confirmText: 'Delete',
+                isDanger: true
+            }, function () {
                 pushHistory();
                 state.data.experience.splice(index, 1);
                 expOpenStates.splice(index, 1);
                 renderExperienceList();
                 notifyChange();
-            }
+            });
         });
 
         item.querySelectorAll('.exp-field').forEach(function (input) {
@@ -1611,13 +1658,18 @@
         });
 
         item.querySelector('.edu-delete-btn').addEventListener('click', function () {
-            if (confirm('Delete this education entry?')) {
+            confirmDialog({
+                title: 'Delete Education',
+                message: 'Delete this education entry? This cannot be undone.',
+                confirmText: 'Delete',
+                isDanger: true
+            }, function () {
                 pushHistory();
                 state.data.education.splice(index, 1);
                 eduOpenStates.splice(index, 1);
                 renderEducationList();
                 notifyChange();
-            }
+            });
         });
 
         item.querySelectorAll('.edu-field').forEach(function (input) {
@@ -1761,13 +1813,18 @@
         });
 
         item.querySelector('.skill-delete-btn').addEventListener('click', function () {
-            if (confirm('Delete this skill category?')) {
+            confirmDialog({
+                title: 'Delete Skill Category',
+                message: 'Delete this skill category? This cannot be undone.',
+                confirmText: 'Delete',
+                isDanger: true
+            }, function () {
                 pushHistory();
                 state.data.skills.splice(index, 1);
                 skillOpenStates.splice(index, 1);
                 renderSkillList();
                 notifyChange();
-            }
+            });
         });
 
         item.querySelector('.skill-cat-field').addEventListener('input', function () {
@@ -1914,12 +1971,18 @@
         });
 
         item.querySelector('.cert-delete-btn').addEventListener('click', function () {
-            if (confirm('Delete this certification?')) {
+            confirmDialog({
+                title: 'Delete Certification',
+                message: 'Delete this certification? This cannot be undone.',
+                confirmText: 'Delete',
+                isDanger: true
+            }, function () {
+                pushHistory();
                 state.data.certifications.splice(index, 1);
                 certOpenStates.splice(index, 1);
                 renderCertList();
                 notifyChange();
-            }
+            });
         });
 
         item.querySelectorAll('.cert-field').forEach(function (input) {
@@ -2077,12 +2140,18 @@
         });
 
         item.querySelector('.proj-delete-btn').addEventListener('click', function () {
-            if (confirm('Delete this project?')) {
+            confirmDialog({
+                title: 'Delete Project',
+                message: 'Delete this project? This cannot be undone.',
+                confirmText: 'Delete',
+                isDanger: true
+            }, function () {
+                pushHistory();
                 state.data.projects.splice(index, 1);
                 projOpenStates.splice(index, 1);
                 renderProjectList();
                 notifyChange();
-            }
+            });
         });
 
         item.querySelectorAll('.proj-field').forEach(function (input) {
@@ -2240,12 +2309,18 @@
         });
 
         item.querySelector('.award-delete-btn').addEventListener('click', function () {
-            if (confirm('Delete this award?')) {
+            confirmDialog({
+                title: 'Delete Award',
+                message: 'Delete this award? This cannot be undone.',
+                confirmText: 'Delete',
+                isDanger: true
+            }, function () {
+                pushHistory();
                 state.data.awards.splice(index, 1);
                 awardOpenStates.splice(index, 1);
                 renderAwardList();
                 notifyChange();
-            }
+            });
         });
 
         item.querySelectorAll('.award-field').forEach(function (input) {
@@ -2434,7 +2509,12 @@
         });
 
         panel.querySelector('.delete-custom-section-btn').addEventListener('click', function () {
-            if (confirm('Delete this custom section?')) {
+            confirmDialog({
+                title: 'Delete Section',
+                message: 'Delete this custom section? This cannot be undone.',
+                confirmText: 'Delete',
+                isDanger: true
+            }, function () {
                 pushHistory();
                 var idx = (state.data.custom_sections || []).findIndex(function (s) { return s.id === cs.id; });
                 if (idx !== -1) state.data.custom_sections.splice(idx, 1);
@@ -2443,7 +2523,7 @@
                 renderAllCustomSectionPanels();
                 renderSidebarNav();
                 notifyChange();
-            }
+            });
         });
 
         return panel;
@@ -2943,13 +3023,21 @@
     if (importPreviewAcceptBtn) {
         importPreviewAcceptBtn.addEventListener('click', function () {
             if (!pendingImportData) return;
-            var data = pendingImportData;
-            var id   = pendingImportId;
-            closeImportPreviewModal();
-            loadImportedData(data);
-            resumeId = id;
-            lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
-            showToast('Resume imported successfully.', 'success');
+            confirmDialog({
+                title: 'Replace Current Resume',
+                message: 'This will replace your current resume with the imported content. This cannot be undone.',
+                confirmText: 'Import',
+                isDanger: true
+            }, function () {
+                var data = pendingImportData;
+                var id   = pendingImportId;
+                closeImportPreviewModal();
+                pushHistory();
+                loadImportedData(data);
+                resumeId = id;
+                lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+                showToast('Resume imported successfully.', 'success');
+            });
         });
     }
 
@@ -3421,6 +3509,44 @@
     var printBtn = document.getElementById('printBtn');
     if (printBtn) {
         printBtn.addEventListener('click', function () { window.print(); });
+    }
+
+    // ── New Resume button ────────────────────────
+    var newResumeBtn = document.getElementById('newResumeBtn');
+    if (newResumeBtn) {
+        newResumeBtn.addEventListener('click', function () {
+            confirmDialog({
+                title: 'Start New Resume',
+                message: 'Start a new resume? Your current resume will be discarded.',
+                confirmText: 'Start New',
+                isDanger: true
+            }, function () {
+                pushHistory();
+                Object.assign(state.data, defaultData());
+                expOpenStates.length = 0;
+                eduOpenStates.length = 0;
+                skillOpenStates.length = 0;
+                certOpenStates.length = 0;
+                projOpenStates.length = 0;
+                awardOpenStates.length = 0;
+                ['name','email','phone','location','linkedin','website'].forEach(function (f) {
+                    var el = document.getElementById(f);
+                    if (el) el.value = '';
+                });
+                if (summaryEl) summaryEl.value = '';
+                updateCharCount();
+                renderAllCustomSectionPanels();
+                renderSidebarNav();
+                renderExperienceList();
+                renderEducationList();
+                renderSkillList();
+                renderCertList();
+                renderProjectList();
+                renderAwardList();
+                notifyChange();
+                showToast('Started a new resume.', 'success');
+            });
+        });
     }
 
     document.addEventListener('click', function (e) {

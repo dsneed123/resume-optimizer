@@ -3108,3 +3108,34 @@ body {
 [data-theme="dark"] .import-progress-fill {
     background: #38bdf8;
 }
+
+/* Confirmation dialog */
+.modal--confirm {
+    max-width: 400px;
+}
+
+.confirm-modal-message {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+.modal-btn--danger {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+.modal-btn--danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+[data-theme="dark"] .modal--confirm {
+    background: var(--bg-sidebar);
+}
+
+[data-theme="dark"] .confirm-modal-message {
+    color: var(--text);
+}
