@@ -443,7 +443,8 @@
         }
 
         _renderSummaryHtml(d) {
-            if (!d.summary || d.show_summary === false) return '';
+            if (d.show_summary === false) return '';
+            if (!d.summary) return '<div class="rv-section"><div class="rv-section-title">Summary</div><p class="rv-section-placeholder">Write 2\u20133 sentences highlighting your key qualifications.</p></div>';
             return '<div class="rv-section">' +
                 '<div class="rv-section-title">Summary</div>' +
                 `<div class="rv-summary rv-editable" data-edit="summary">${this._esc(d.summary)}</div>` +
@@ -453,7 +454,7 @@
         _renderExperienceHtml(d) {
             if (d.show_experience === false) return '';
             const allExp = d.experience || [];
-            if (!allExp.some(e => e.company || e.title)) return '';
+            if (!allExp.some(e => e.company || e.title)) return '<div class="rv-section"><div class="rv-section-title">Experience</div><p class="rv-section-placeholder">Add your work experience. Start with your most recent position.</p></div>';
             let html = '<div class="rv-section"><div class="rv-section-title">Experience</div>';
             allExp.forEach((e, realIdx) => {
                 if (!e.company && !e.title) return;
@@ -481,7 +482,7 @@
         _renderEducationHtml(d) {
             if (d.show_education === false) return '';
             const allEdu = d.education || [];
-            if (!allEdu.some(e => e.school)) return '';
+            if (!allEdu.some(e => e.school)) return '<div class="rv-section"><div class="rv-section-title">Education</div><p class="rv-section-placeholder">Add your educational background.</p></div>';
             let html = '<div class="rv-section"><div class="rv-section-title">Education</div>';
             allEdu.forEach((e, realIdx) => {
                 if (!e.school) return;
@@ -505,8 +506,9 @@
         }
 
         _renderSkillsHtml(d) {
+            if (d.show_skills === false) return '';
             const skills = (d.skills || []).filter(s => s.category || (s.items && s.items.length));
-            if (!skills.length || d.show_skills === false) return '';
+            if (!skills.length) return '<div class="rv-section"><div class="rv-section-title">Skills</div><p class="rv-section-placeholder">List your technical and soft skills.</p></div>';
             const layout = (this.typo && this.typo.skills_layout) || 'inline';
             let html = `<div class="rv-section"><div class="rv-section-title">Skills</div><div class="rv-skills-grid rv-skills-${layout}">`;
             if (layout === 'columns') {
@@ -1879,7 +1881,7 @@
         if (!listEl) return;
 
         if (!state.data.experience.length) {
-            listEl.innerHTML = '<p class="empty-state">No experience added yet.</p>';
+            listEl.innerHTML = '<p class="empty-state">Add your work experience. Start with your most recent position.</p>';
             return;
         }
 
@@ -2050,7 +2052,7 @@
         if (!listEl) return;
 
         if (!state.data.education.length) {
-            listEl.innerHTML = '<p class="empty-state">No education added yet.</p>';
+            listEl.innerHTML = '<p class="empty-state">Add your educational background.</p>';
             return;
         }
 
@@ -2205,7 +2207,7 @@
         if (!listEl) return;
 
         if (!state.data.skills.length) {
-            listEl.innerHTML = '<p class="empty-state">No skills added yet.</p>';
+            listEl.innerHTML = '<p class="empty-state">List your technical and soft skills.</p>';
             return;
         }
 

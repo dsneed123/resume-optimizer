@@ -585,6 +585,13 @@ body {
     padding: 24px 0;
 }
 
+.rv-section-placeholder {
+    font-size: 13px;
+    color: #9ca3af;
+    font-style: italic;
+    margin: 4px 0 0;
+}
+
 /* Stats panel */
 .stats-panel {
     flex-shrink: 0;
