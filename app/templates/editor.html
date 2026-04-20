@@ -135,6 +135,7 @@
                     <button class="sidebar-nav-btn active" data-section="header">Contact</button>
                     <!-- Remaining section tabs rendered by JS based on section_order -->
                     <button class="sidebar-nav-btn" data-section="typography">Typography</button>
+                    <button class="sidebar-nav-btn" data-section="ats">ATS Score</button>
                 </nav>
 
                 <div class="sidebar-section active" id="section-header">
@@ -254,6 +255,31 @@
                 </div>
 
                 <div id="customSectionsContainer"></div>
+
+                <div class="sidebar-section" id="section-ats">
+                    <div class="section-header">
+                        <h2 class="section-title">ATS Score</h2>
+                    </div>
+                    <div class="ats-gauge-wrap" id="atsGaugeWrap">
+                        <svg class="ats-gauge" viewBox="0 0 100 100" width="120" height="120" aria-hidden="true">
+                            <circle class="ats-gauge-bg" cx="50" cy="50" r="40"/>
+                            <circle class="ats-gauge-fill" id="atsGaugeFill" cx="50" cy="50" r="40"/>
+                        </svg>
+                        <div class="ats-score-number" id="atsScoreNumber">—</div>
+                        <div class="ats-score-label" id="atsScoreLabel">Not scored yet</div>
+                    </div>
+                    <div class="ats-btn-wrap">
+                        <button class="ats-refresh-btn" id="refreshAtsBtn">
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                                <path d="M11 2.5A5.5 5.5 0 1 0 12 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M9 .5l3 2-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Refresh Score
+                        </button>
+                    </div>
+                    <div id="atsIssuesList"></div>
+                    <div id="atsSuggestionsList"></div>
+                </div>
 
                 <div class="sidebar-section" id="section-typography">
                     <div class="section-header">
