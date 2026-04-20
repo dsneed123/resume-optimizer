@@ -1,6 +1,6 @@
 import os
 import re
-from flask import Flask
+from flask import Flask, jsonify
 from markupsafe import Markup, escape
 
 
@@ -78,5 +78,9 @@ def create_app():
 
     from app.routes import bp
     app.register_blueprint(bp)
+
+    @app.errorhandler(413)
+    def request_entity_too_large(e):
+        return jsonify({'error': 'File exceeds size limit'}), 413
 
     return app

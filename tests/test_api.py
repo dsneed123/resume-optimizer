@@ -250,7 +250,7 @@ def test_import_no_file(client):
 
 def test_import_unsupported_type(client):
     resp = _post_file(client, 'resume.txt', b'hello', 'text/plain')
-    assert resp.status_code == 400
+    assert resp.status_code == 415
     assert 'Unsupported' in resp.get_json()['error']
 
 

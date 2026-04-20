@@ -37,14 +37,14 @@ def test_import_no_file(client):
 
 def test_import_unsupported_type(client):
     resp = _post_file(client, 'resume.txt', b'hello', 'text/plain')
-    assert resp.status_code == 400
+    assert resp.status_code == 415
     assert 'Unsupported' in resp.get_json()['error']
 
 
 def test_import_file_too_large(client):
     big = b'x' * (10 * 1024 * 1024 + 1)
     resp = _post_file(client, 'resume.pdf', big, 'application/pdf')
-    assert resp.status_code == 400
+    assert resp.status_code == 413
     assert '10 MB' in resp.get_json()['error']
 
 
