@@ -665,4 +665,167 @@
     }
 
     renderExperienceList();
+
+    // ── Education section ────────────────────────
+    var eduOpenStates = [];
+
+    function newEducationEntry() {
+        return { school: '', degree: '', field: '', graduation_date: '', gpa: '', honors: '' };
+    }
+
+    function buildEduItem(entry, index) {
+        var item = document.createElement('div');
+        item.className = 'edu-item' + (eduOpenStates[index] === false ? ' collapsed' : '');
+        item.dataset.index = String(index);
+        item.draggable = true;
+
+        var label = entry.school || 'New Entry';
+        var chevron = eduOpenStates[index] === false ? '▸' : '▾';
+
+        item.innerHTML =
+            '<div class="edu-item-header">' +
+                '<span class="drag-handle" title="Drag to reorder">⠿</span>' +
+                '<span class="edu-item-label">' + escHtml(label) + '</span>' +
+                '<div class="edu-item-actions">' +
+                    '<button class="edu-toggle-btn" title="Expand/collapse">' + chevron + '</button>' +
+                    '<button class="edu-delete-btn" title="Delete entry">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="edu-item-body">' +
+                '<div class="field-group">' +
+                    '<label class="field-label">School</label>' +
+                    '<input class="field-input edu-field" data-field="school" type="text" value="' + escHtml(entry.school) + '" placeholder="University of California">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Degree</label>' +
+                    '<input class="field-input edu-field" data-field="degree" type="text" value="' + escHtml(entry.degree) + '" placeholder="Bachelor of Science">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Field of Study</label>' +
+                    '<input class="field-input edu-field" data-field="field" type="text" value="' + escHtml(entry.field) + '" placeholder="Computer Science">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Graduation Date</label>' +
+                    '<input class="field-input edu-field" data-field="graduation_date" type="text" value="' + escHtml(entry.graduation_date) + '" placeholder="May 2022">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">GPA (optional)</label>' +
+                    '<input class="field-input edu-field" data-field="gpa" type="text" value="' + escHtml(entry.gpa) + '" placeholder="3.8">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Honors (optional)</label>' +
+                    '<input class="field-input edu-field" data-field="honors" type="text" value="' + escHtml(entry.honors) + '" placeholder="Magna Cum Laude">' +
+                '</div>' +
+            '</div>';
+
+        var header = item.querySelector('.edu-item-header');
+        var toggleBtn = item.querySelector('.edu-toggle-btn');
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.edu-delete-btn') || e.target.closest('.drag-handle')) return;
+            var nowCollapsed = item.classList.toggle('collapsed');
+            eduOpenStates[index] = !nowCollapsed;
+            toggleBtn.textContent = nowCollapsed ? '▸' : '▾';
+        });
+
+        item.querySelector('.edu-delete-btn').addEventListener('click', function () {
+            if (confirm('Delete this education entry?')) {
+                state.data.education.splice(index, 1);
+                eduOpenStates.splice(index, 1);
+                renderEducationList();
+                notifyChange();
+            }
+        });
+
+        item.querySelectorAll('.edu-field').forEach(function (input) {
+            input.addEventListener('input', function () {
+                state.data.education[index][input.dataset.field] = input.value;
+                if (input.dataset.field === 'school') {
+                    item.querySelector('.edu-item-label').textContent = input.value || 'New Entry';
+                }
+                notifyChange();
+            });
+        });
+
+        return item;
+    }
+
+    function bindEduDragDrop() {
+        var listEl = document.getElementById('educationList');
+        if (!listEl) return;
+        var items = listEl.querySelectorAll('.edu-item');
+        var dragSrcIndex = null;
+
+        items.forEach(function (item) {
+            item.addEventListener('dragstart', function (e) {
+                dragSrcIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', function () {
+                item.classList.remove('dragging');
+                items.forEach(function (i) { i.classList.remove('drag-over'); });
+                dragSrcIndex = null;
+            });
+
+            item.addEventListener('dragover', function (e) {
+                if (dragSrcIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', function () {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dropIndex = parseInt(item.dataset.index);
+                if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    var edu = state.data.education;
+                    var moved = edu.splice(dragSrcIndex, 1)[0];
+                    edu.splice(dropIndex, 0, moved);
+                    var openMoved = eduOpenStates.splice(dragSrcIndex, 1)[0];
+                    eduOpenStates.splice(dropIndex, 0, openMoved);
+                    renderEducationList();
+                    notifyChange();
+                }
+                dragSrcIndex = null;
+            });
+        });
+    }
+
+    function renderEducationList() {
+        var listEl = document.getElementById('educationList');
+        if (!listEl) return;
+
+        if (!state.data.education.length) {
+            listEl.innerHTML = '<p class="empty-state">No education added yet.</p>';
+            return;
+        }
+
+        while (eduOpenStates.length < state.data.education.length) eduOpenStates.push(true);
+        eduOpenStates.length = state.data.education.length;
+
+        listEl.innerHTML = '';
+        state.data.education.forEach(function (entry, index) {
+            listEl.appendChild(buildEduItem(entry, index));
+        });
+
+        bindEduDragDrop();
+    }
+
+    var addEduBtn = document.getElementById('addEducation');
+    if (addEduBtn) {
+        addEduBtn.addEventListener('click', function () {
+            state.data.education.push(newEducationEntry());
+            eduOpenStates.push(true);
+            renderEducationList();
+            notifyChange();
+        });
+    }
+
+    renderEducationList();
 })();
