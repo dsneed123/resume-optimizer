@@ -20,6 +20,7 @@ from app.services.docx_import import (
     _parse_resume_paragraphs,
     _fallback_resume,
     _is_bullet,
+    _HEADER_MARKER,
 )
 
 docx_required = pytest.mark.skipif(
@@ -111,6 +112,75 @@ def test_parse_experience_block_with_dates():
     assert entries[0]["start_date"].lower().startswith("jan")
     assert entries[0]["end_date"].lower() == "present"
     assert len(entries[0]["bullets"]) == 2
+
+
+def test_parse_experience_block_year_only_range():
+    lines = [
+        "Software Engineer  |  Startup Inc  2020-2023",
+        "• Shipped product features",
+    ]
+    entries = _parse_experience_block(lines)
+    assert len(entries) == 1
+    assert entries[0]["start_date"] == "2020"
+    assert entries[0]["end_date"] == "2023"
+
+
+def test_parse_experience_block_to_separator():
+    lines = [
+        "Engineer  |  Corp  January 2020 to March 2023",
+        "• Did work",
+    ]
+    entries = _parse_experience_block(lines)
+    assert len(entries) == 1
+    assert "january" in entries[0]["start_date"].lower()
+    assert "march" in entries[0]["end_date"].lower()
+
+
+def test_parse_experience_block_date_on_separate_line():
+    lines = [
+        "Software Engineer",
+        "Acme Corp",
+        "Jan 2020 - Present",
+        "• Built APIs",
+    ]
+    entries = _parse_experience_block(lines)
+    assert len(entries) == 1
+    assert entries[0]["title"] == "Software Engineer"
+    assert entries[0]["company"] == "Acme Corp"
+    assert entries[0]["start_date"].lower().startswith("jan")
+    assert entries[0]["end_date"].lower() == "present"
+    assert len(entries[0]["bullets"]) == 1
+
+
+def test_parse_experience_block_multiple_positions_bold_header():
+    lines = [
+        f"{_HEADER_MARKER}Google",
+        "Senior Engineer  Jan 2021 - Present",
+        "• Led infrastructure work",
+        "Junior Engineer  Jan 2019 - Dec 2020",
+        "• Built backend services",
+    ]
+    entries = _parse_experience_block(lines)
+    assert len(entries) == 2
+    assert entries[0]["company"] == "Google"
+    assert entries[0]["title"] == "Senior Engineer"
+    assert entries[1]["company"] == "Google"
+    assert entries[1]["title"] == "Junior Engineer"
+
+
+def test_parse_resume_paragraphs_bold_company_header():
+    paragraphs = [
+        {"text": "EXPERIENCE", "style": "Heading 1", "is_heading": True, "is_list": False, "bold": False, "italic": False},
+        {"text": "Google", "style": "Normal", "is_heading": False, "is_list": False, "bold": True, "italic": False},
+        {"text": "Senior Engineer  Jan 2021 - Present", "style": "Normal", "is_heading": False, "is_list": False, "bold": False, "italic": False},
+        {"text": "Built scalable systems", "style": "List Paragraph", "is_heading": False, "is_list": True, "bold": False, "italic": False},
+        {"text": "Junior Engineer  Jan 2019 - Dec 2020", "style": "Normal", "is_heading": False, "is_list": False, "bold": False, "italic": False},
+        {"text": "Wrote backend services", "style": "List Paragraph", "is_heading": False, "is_list": True, "bold": False, "italic": False},
+    ]
+    result = _parse_resume_paragraphs(paragraphs)
+    assert len(result["experience"]) == 2
+    assert result["experience"][0]["company"] == "Google"
+    assert result["experience"][1]["company"] == "Google"
 
 
 def test_parse_education_block():
