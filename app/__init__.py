@@ -1,5 +1,7 @@
 import os
+import re
 from flask import Flask
+from markupsafe import Markup, escape
 
 
 _MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -49,6 +51,16 @@ def _format_date(date_str, fmt='MMM YYYY'):
     return s
 
 
+def _render_inline_md(text):
+    """Convert **bold** and *italic* markdown to HTML. Returns a Markup to avoid double-escaping."""
+    s = str(text or '')
+    # Escape HTML first, then apply markdown substitutions on the escaped string
+    s = str(escape(s))
+    s = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', s)
+    s = re.sub(r'\*(.+?)\*', r'<em>\1</em>', s)
+    return Markup(s)
+
+
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
@@ -62,6 +74,7 @@ def create_app():
     app.config['EXPORT_FOLDER'] = export_dir
 
     app.jinja_env.filters['format_date'] = _format_date
+    app.jinja_env.filters['render_inline_md'] = _render_inline_md
 
     from app.routes import bp
     app.register_blueprint(bp)

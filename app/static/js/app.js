@@ -235,6 +235,13 @@
                 .replace(/>/g, '&gt;');
         }
 
+        _renderInlineMd(str) {
+            const escaped = this._esc(str);
+            return escaped
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>');
+        }
+
         _formatDate(dateStr, fmt) {
             if (!dateStr) return dateStr;
             const s = dateStr.trim();
@@ -293,7 +300,7 @@
                 html += '</div>';
                 if (e.bullets && e.bullets.length) {
                     html += '<ul class="rv-bullets">';
-                    for (const b of e.bullets) html += `<li>${this._esc(b)}</li>`;
+                    for (const b of e.bullets) html += `<li>${this._renderInlineMd(b)}</li>`;
                     html += '</ul>';
                 }
                 html += '</div>';

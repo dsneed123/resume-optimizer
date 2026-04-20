@@ -7,6 +7,26 @@ from docx.oxml import OxmlElement
 from docx.shared import Inches, Pt, RGBColor
 
 
+import re as _re
+
+_INLINE_MD_RE = _re.compile(r'(\*\*(.+?)\*\*|\*(.+?)\*)')
+
+
+def _add_inline_md_runs(para, text: str, font_name: str, font_size: float):
+    """Split text on **bold** and *italic* markers, adding styled runs."""
+    pos = 0
+    for m in _INLINE_MD_RE.finditer(text):
+        if m.start() > pos:
+            _add_run(para, text[pos:m.start()], font_name, font_size)
+        if m.group(2) is not None:
+            _add_run(para, m.group(2), font_name, font_size, bold=True)
+        else:
+            _add_run(para, m.group(3), font_name, font_size, italic=True)
+        pos = m.end()
+    if pos < len(text):
+        _add_run(para, text[pos:], font_name, font_size)
+
+
 _FONT_MAP = {
     "Helvetica": "Arial",
     "Times New Roman": "Times New Roman",
@@ -160,7 +180,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
                     continue
                 bul_para = doc.add_paragraph(style="List Bullet")
                 _set_paragraph_spacing(bul_para, 0, 1, line_height)
-                _add_run(bul_para, str(bullet), font_name, size_body)
+                _add_inline_md_runs(bul_para, str(bullet), font_name, size_body)
 
     # --- Education ---
     education = resume_data.get("education", [])

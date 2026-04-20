@@ -254,7 +254,7 @@
       {% if exp.bullets %}
       <ul class="bullets">
         {% for bullet in exp.bullets %}
-        <li>{{ bullet }}</li>
+        <li>{{ bullet | render_inline_md }}</li>
         {% endfor %}
       </ul>
       {% endif %}
