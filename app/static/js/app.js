@@ -383,9 +383,69 @@
     const preview = new ResumePreview(pageEl, previewEl);
     preview.update(state.data, state.typo);
 
+    // ── Auto-save ────────────────────────────────
+    var resumeId = null;
+    var saveTimer = null;
+    var lastSavedSnapshot = null;
+    var saveStatusEl = document.getElementById('saveStatus');
+
+    function setSaveStatus(status) {
+        if (!saveStatusEl) return;
+        saveStatusEl.className = 'save-status';
+        if (status === 'saving') {
+            saveStatusEl.classList.add('saving');
+            saveStatusEl.textContent = 'Saving...';
+        } else if (status === 'saved') {
+            saveStatusEl.classList.add('saved');
+            saveStatusEl.textContent = 'Saved';
+        } else if (status === 'error') {
+            saveStatusEl.classList.add('error');
+            saveStatusEl.textContent = 'Error saving';
+        } else {
+            saveStatusEl.textContent = '';
+        }
+    }
+
+    function doSave() {
+        if (!resumeId) return;
+        var snapshot = JSON.stringify({ data: state.data, typo: state.typo });
+        if (snapshot === lastSavedSnapshot) return;
+        setSaveStatus('saving');
+        var bodyStr = JSON.stringify({ data: state.data, typography: state.typo });
+        fetch('/api/resume/' + resumeId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: bodyStr
+        })
+        .then(function (r) {
+            if (!r.ok) throw new Error('save failed');
+            lastSavedSnapshot = snapshot;
+            setSaveStatus('saved');
+        })
+        .catch(function () {
+            setSaveStatus('error');
+        });
+    }
+
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(doSave, 1000);
+    }
+
+    function initResumeId() {
+        fetch('/api/resume/new', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                resumeId = res.id;
+                lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+            })
+            .catch(function () {});
+    }
+
     function notifyChange() {
         preview.update(state.data, state.typo);
         schedulePageCheck();
+        scheduleSave();
     }
 
     // ── Sidebar nav (dynamic, ordered by section_order) ─────────────────
@@ -1968,6 +2028,8 @@
                         return;
                     }
                     loadImportedData(res.body.data);
+                    resumeId = res.body.id;
+                    lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
                     closeImportModal();
                     showAutoFitToast('Resume imported successfully.');
                 })
@@ -2110,4 +2172,19 @@
             });
         });
     }
+
+    window.addEventListener('beforeunload', function () {
+        if (!resumeId) return;
+        var snapshot = JSON.stringify({ data: state.data, typo: state.typo });
+        if (snapshot === lastSavedSnapshot) return;
+        navigator.sendBeacon(
+            '/api/resume/' + resumeId,
+            new Blob(
+                [JSON.stringify({ data: state.data, typography: state.typo })],
+                { type: 'application/json' }
+            )
+        );
+    });
+
+    initResumeId();
 })();
