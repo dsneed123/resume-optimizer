@@ -989,6 +989,36 @@ body {
     flex-shrink: 0;
 }
 
+.bullet-drag-handle {
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: grab;
+    padding: 0 2px;
+    flex-shrink: 0;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    user-select: none;
+}
+
+.bullet-drag-handle:hover {
+    opacity: 1;
+}
+
+.bullet-drag-handle:active {
+    cursor: grabbing;
+}
+
+.bullet-item.dragging {
+    opacity: 0.4;
+}
+
+.bullet-item.drag-over {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-radius: 4px;
+    background: rgba(79, 110, 247, 0.05);
+}
+
 .bullet-up,
 .bullet-down {
     background: none;
