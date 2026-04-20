@@ -3021,6 +3021,16 @@ body {
     padding: 0 16px 8px;
 }
 
+.ats-info-icon {
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: help;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+.ats-info-icon:hover {
+    color: var(--accent);
+}
 .ats-refresh-btn {
     display: flex;
     align-items: center;
