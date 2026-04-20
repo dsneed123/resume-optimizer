@@ -1979,6 +1979,107 @@
         });
     }
 
+    // ── Export dropdown ──────────────────────────
+    var exportDropdown  = document.getElementById('exportDropdown');
+    var exportBtn       = document.getElementById('exportBtn');
+    var exportMenu      = document.getElementById('exportMenu');
+    var exportPdfBtn    = document.getElementById('exportPdfBtn');
+    var exportDocxBtn   = document.getElementById('exportDocxBtn');
+    var exportPdfSpinner  = document.getElementById('exportPdfSpinner');
+    var exportDocxSpinner = document.getElementById('exportDocxSpinner');
+
+    function openExportMenu() {
+        if (exportMenu) exportMenu.hidden = false;
+        if (exportDropdown) exportDropdown.classList.add('open');
+    }
+
+    function closeExportMenu() {
+        if (exportMenu) exportMenu.hidden = true;
+        if (exportDropdown) exportDropdown.classList.remove('open');
+    }
+
+    function getExportFilename(ext) {
+        var name = (state.data && state.data.header && state.data.header.name) || 'resume';
+        var slug = name.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') || 'resume';
+        return slug + '-resume.' + ext;
+    }
+
+    function triggerDownload(blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function doExport(format) {
+        var spinner = format === 'pdf' ? exportPdfSpinner : exportDocxSpinner;
+        var btn = format === 'pdf' ? exportPdfBtn : exportDocxBtn;
+        var endpoint = '/api/resume/' + format;
+        var mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+        if (btn) btn.disabled = true;
+        if (spinner) spinner.hidden = false;
+        closeExportMenu();
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: state.data, typography: state.typo })
+        })
+        .then(function (r) {
+            if (!r.ok) {
+                return r.json().then(function (body) {
+                    throw new Error(body.error || 'Export failed');
+                });
+            }
+            return r.blob();
+        })
+        .then(function (blob) {
+            var typedBlob = new Blob([blob], { type: mimeType });
+            triggerDownload(typedBlob, getExportFilename(format));
+        })
+        .catch(function (err) {
+            showAutoFitToast((err && err.message) || 'Export failed. Please try again.');
+        })
+        .finally(function () {
+            if (btn) btn.disabled = false;
+            if (spinner) spinner.hidden = true;
+        });
+    }
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (exportMenu && exportMenu.hidden) {
+                openExportMenu();
+            } else {
+                closeExportMenu();
+            }
+        });
+    }
+
+    if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', function () { doExport('pdf'); });
+    }
+
+    if (exportDocxBtn) {
+        exportDocxBtn.addEventListener('click', function () { doExport('docx'); });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (exportDropdown && !exportDropdown.contains(e.target)) {
+            closeExportMenu();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && exportMenu && !exportMenu.hidden) closeExportMenu();
+    });
+
     // ── Auto-fit button ──────────────────────────
     if (autoFitBtn) {
         autoFitBtn.addEventListener('click', function () {
