@@ -4050,12 +4050,160 @@
         });
     }
 
+    // ── Template presets ─────────────────────────
+    var TEMPLATE_PRESETS = {
+        classic: {
+            font_family: 'Helvetica',
+            font_size_name: 20,
+            font_size_section_header: 12,
+            font_size_body: 10,
+            font_size_detail: 9,
+            line_height: 1.15,
+            paragraph_spacing: 4,
+            section_spacing: 10,
+            margin_top: 0.5,
+            margin_bottom: 0.5,
+            margin_left: 0.6,
+            margin_right: 0.6,
+            bullet_indent: 12,
+            header_layout: 'centered',
+            contact_separator: 'pipe',
+            section_divider_style: 'thin',
+            skills_layout: 'inline',
+            bullet_style: 'filled',
+        },
+        modern: {
+            font_family: 'Calibri',
+            font_size_name: 22,
+            font_size_section_header: 12,
+            font_size_body: 10.5,
+            font_size_detail: 9.5,
+            line_height: 1.3,
+            paragraph_spacing: 5,
+            section_spacing: 12,
+            margin_top: 0.6,
+            margin_bottom: 0.6,
+            margin_left: 0.7,
+            margin_right: 0.7,
+            bullet_indent: 12,
+            header_layout: 'left-aligned',
+            contact_separator: 'dot',
+            section_divider_style: 'thick',
+            skills_layout: 'inline',
+            bullet_style: 'filled',
+        },
+        compact: {
+            font_family: 'Arial',
+            font_size_name: 17,
+            font_size_section_header: 11,
+            font_size_body: 9.5,
+            font_size_detail: 8.5,
+            line_height: 1.05,
+            paragraph_spacing: 2,
+            section_spacing: 6,
+            margin_top: 0.4,
+            margin_bottom: 0.4,
+            margin_left: 0.5,
+            margin_right: 0.5,
+            bullet_indent: 10,
+            header_layout: 'two-line',
+            contact_separator: 'pipe',
+            section_divider_style: 'thin',
+            skills_layout: 'inline',
+            bullet_style: 'filled',
+        },
+        academic: {
+            font_family: 'Times New Roman',
+            font_size_name: 20,
+            font_size_section_header: 12,
+            font_size_body: 11,
+            font_size_detail: 10,
+            line_height: 1.2,
+            paragraph_spacing: 4,
+            section_spacing: 10,
+            margin_top: 1.0,
+            margin_bottom: 1.0,
+            margin_left: 1.0,
+            margin_right: 1.0,
+            bullet_indent: 14,
+            header_layout: 'centered',
+            contact_separator: 'pipe',
+            section_divider_style: 'thin',
+            skills_layout: 'inline',
+            bullet_style: 'filled',
+        },
+    };
+
+    var templatesBtn         = document.getElementById('templatesBtn');
+    var templatesModal       = document.getElementById('templatesModal');
+    var templatesModalClose  = document.getElementById('templatesModalClose');
+    var templatesApplyBtn    = document.getElementById('templatesApplyBtn');
+    var templatesCancelBtn   = document.getElementById('templatesModalCancelBtn');
+    var selectedTemplate     = null;
+
+    function openTemplatesModal() {
+        if (!templatesModal) return;
+        templatesModal.hidden = false;
+        selectedTemplate = null;
+        templatesModal.querySelectorAll('.template-card').forEach(function (card) {
+            card.classList.remove('selected');
+        });
+        if (templatesApplyBtn) templatesApplyBtn.disabled = true;
+    }
+
+    function closeTemplatesModal() {
+        if (templatesModal) templatesModal.hidden = true;
+        selectedTemplate = null;
+    }
+
+    if (templatesBtn) {
+        templatesBtn.addEventListener('click', openTemplatesModal);
+    }
+
+    if (templatesModalClose) {
+        templatesModalClose.addEventListener('click', closeTemplatesModal);
+    }
+
+    if (templatesCancelBtn) {
+        templatesCancelBtn.addEventListener('click', closeTemplatesModal);
+    }
+
+    if (templatesModal) {
+        templatesModal.addEventListener('click', function (e) {
+            if (e.target === templatesModal) closeTemplatesModal();
+        });
+
+        templatesModal.querySelectorAll('.template-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                templatesModal.querySelectorAll('.template-card').forEach(function (c) {
+                    c.classList.remove('selected');
+                });
+                card.classList.add('selected');
+                selectedTemplate = card.dataset.template;
+                if (templatesApplyBtn) templatesApplyBtn.disabled = false;
+            });
+        });
+    }
+
+    if (templatesApplyBtn) {
+        templatesApplyBtn.addEventListener('click', function () {
+            if (!selectedTemplate || !TEMPLATE_PRESETS[selectedTemplate]) return;
+            pushHistory();
+            applyTypoToControls(TEMPLATE_PRESETS[selectedTemplate]);
+            notifyChange();
+            closeTemplatesModal();
+            var name = selectedTemplate.charAt(0).toUpperCase() + selectedTemplate.slice(1);
+            showToast('Applied ' + name + ' template.', 'success');
+        });
+    }
+
     // ── Unified keyboard shortcuts ───────────────
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             if (importModal && !importModal.hidden) closeImportModal();
             if (exportMenu && !exportMenu.hidden) closeExportMenu();
             if (shortcutsPopover && !shortcutsPopover.hidden) closeShortcutsPopover();
+            if (templatesModal && !templatesModal.hidden) closeTemplatesModal();
             return;
         }
 
