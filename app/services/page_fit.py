@@ -138,11 +138,25 @@ def calculate_content_height(resume_data: dict, typography: dict) -> float:
 
 
 def _render_page_count(resume_data: dict, typography: dict) -> int:
+    from pathlib import Path
+
     from weasyprint import HTML  # lazy import — system libs may not be present
+    from app.services.font_config import build_font_face_css, get_css_family
+
+    static_dir = Path(__file__).parent.parent / "static"
     data = _dict_to_ns(resume_data)
     t = _dict_to_ns(typography)
-    html_str = render_template("pdf_resume.html", data=data, typography=t)
-    document = HTML(string=html_str).render()
+    font_family = typography.get("font_family", "Helvetica")
+    font_css = build_font_face_css(font_family)
+    css_family = get_css_family(font_family)
+    html_str = render_template(
+        "pdf_resume.html",
+        data=data,
+        typography=t,
+        font_css=font_css,
+        css_family=css_family,
+    )
+    document = HTML(string=html_str, base_url=str(static_dir)).render()
     return len(document.pages)
 
 

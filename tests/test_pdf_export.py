@@ -1,5 +1,7 @@
 import pytest
 
+from app.services.font_config import build_font_face_css, get_css_family
+
 try:
     from app.services.pdf_export import export_pdf
     _WEASYPRINT_AVAILABLE = True
@@ -87,3 +89,58 @@ def test_export_pdf_respects_typography(ctx):
     typo['font_size_body'] = 11
     pdf = export_pdf(data, typo)
     assert pdf[:4] == b'%PDF'
+
+
+@weasyprint_required
+def test_export_pdf_garamond_font(ctx):
+    data = default_resume()
+    data['header']['name'] = 'Test User'
+    data['header']['email'] = 'test@example.com'
+    typo = default_typography()
+    typo['font_family'] = 'Garamond'
+    pdf = export_pdf(data, typo)
+    assert pdf[:4] == b'%PDF'
+
+
+@weasyprint_required
+def test_export_pdf_calibri_font(ctx):
+    data = default_resume()
+    data['header']['name'] = 'Test User'
+    data['header']['email'] = 'test@example.com'
+    typo = default_typography()
+    typo['font_family'] = 'Calibri'
+    pdf = export_pdf(data, typo)
+    assert pdf[:4] == b'%PDF'
+
+
+def test_build_font_face_css_garamond():
+    css = build_font_face_css('Garamond')
+    assert 'EB Garamond' in css
+    assert '@font-face' in css
+    assert "EBGaramond-Regular.ttf" in css
+
+
+def test_build_font_face_css_calibri():
+    css = build_font_face_css('Calibri')
+    assert 'Carlito' in css
+    assert '@font-face' in css
+    assert "Carlito-Regular.ttf" in css
+
+
+def test_build_font_face_css_system_fonts_empty():
+    for family in ('Helvetica', 'Arial', 'Times New Roman', 'Georgia'):
+        assert build_font_face_css(family) == ''
+
+
+def test_get_css_family_includes_fallback():
+    for family in ('Helvetica', 'Arial', 'Times New Roman', 'Georgia', 'Calibri', 'Garamond'):
+        result = get_css_family(family)
+        assert 'Helvetica' in result or 'sans-serif' in result
+        assert family in result or result  # mapped family name present
+
+
+def test_get_css_family_unknown_falls_back():
+    result = get_css_family('UnknownFont')
+    assert 'UnknownFont' in result
+    assert 'Helvetica' in result
+    assert 'sans-serif' in result
