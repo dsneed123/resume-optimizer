@@ -1356,7 +1356,8 @@
     }
 
     function buildBulletHTML(text, bi) {
-        return '<div class="bullet-item">' +
+        return '<div class="bullet-item" draggable="true" data-bi="' + bi + '">' +
+            '<span class="bullet-drag-handle" title="Drag to reorder">⠿</span>' +
             '<div class="bullet-reorder">' +
             '<button class="bullet-up" data-bi="' + bi + '" title="Move up">▲</button>' +
             '<button class="bullet-down" data-bi="' + bi + '" title="Move down">▼</button>' +
@@ -1426,6 +1427,12 @@
         var header = item.querySelector('.exp-item-header');
         var toggleBtn = item.querySelector('.exp-toggle-btn');
         var bulletList = item.querySelector('.bullet-list');
+
+        var renderBullets = function () {
+            bulletList.innerHTML = state.data.experience[index].bullets.map(buildBulletHTML).join('');
+            bindBulletDragDrop(bulletList, state.data.experience[index].bullets, renderBullets);
+        };
+        bindBulletDragDrop(bulletList, state.data.experience[index].bullets, renderBullets);
 
         header.addEventListener('click', function (e) {
             if (e.target.closest('.exp-delete-btn') || e.target.closest('.drag-handle')) return;
@@ -1530,7 +1537,7 @@
                 bi = parseInt(removeBtn.dataset.bi);
                 pushHistory();
                 bullets.splice(bi, 1);
-                bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                renderBullets();
                 notifyChange();
             } else if (upBtn) {
                 bi = parseInt(upBtn.dataset.bi);
@@ -1539,7 +1546,7 @@
                     tmp = bullets[bi - 1];
                     bullets[bi - 1] = bullets[bi];
                     bullets[bi] = tmp;
-                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    renderBullets();
                     notifyChange();
                 }
             } else if (downBtn) {
@@ -1549,7 +1556,7 @@
                     tmp = bullets[bi];
                     bullets[bi] = bullets[bi + 1];
                     bullets[bi + 1] = tmp;
-                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    renderBullets();
                     notifyChange();
                 }
             }
@@ -1558,7 +1565,7 @@
         item.querySelector('.add-bullet-btn').addEventListener('click', function () {
             pushHistory();
             state.data.experience[index].bullets.push('');
-            bulletList.innerHTML = state.data.experience[index].bullets.map(buildBulletHTML).join('');
+            renderBullets();
             notifyChange();
             var inputs = bulletList.querySelectorAll('.bullet-input');
             if (inputs.length) inputs[inputs.length - 1].focus();
@@ -1610,6 +1617,56 @@
                     renderExperienceList();
                     notifyChange();
                 }
+                dragSrcIndex = null;
+            });
+        });
+    }
+
+    function bindBulletDragDrop(bulletList, bullets, renderFn) {
+        var items = bulletList.querySelectorAll('.bullet-item');
+        var dragSrcIndex = null;
+
+        items.forEach(function (item) {
+            item.addEventListener('dragstart', function (e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+                    e.preventDefault();
+                    return;
+                }
+                dragSrcIndex = parseInt(item.dataset.bi);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', function () {
+                item.classList.remove('dragging');
+                items.forEach(function (i) { i.classList.remove('drag-over'); });
+                dragSrcIndex = null;
+            });
+
+            item.addEventListener('dragover', function (e) {
+                if (dragSrcIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', function (e) {
+                if (!item.contains(e.relatedTarget)) {
+                    item.classList.remove('drag-over');
+                }
+            });
+
+            item.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dropIndex = parseInt(item.dataset.bi);
+                if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    pushHistory();
+                    var moved = bullets.splice(dragSrcIndex, 1)[0];
+                    bullets.splice(dropIndex, 0, moved);
+                    renderFn();
+                    notifyChange();
+                }
+                item.classList.remove('drag-over');
                 dragSrcIndex = null;
             });
         });
@@ -2506,11 +2563,18 @@
         var addBulletBtn = panel.querySelector('.add-btn');
         var bulletList = panel.querySelector('#customBulletList_' + cs.id);
 
+        var renderCustomBullets = function () {
+            if (!cs.bullets) cs.bullets = [];
+            bulletList.innerHTML = cs.bullets.map(buildBulletHTML).join('');
+            bindBulletDragDrop(bulletList, cs.bullets, renderCustomBullets);
+        };
+        bindBulletDragDrop(bulletList, cs.bullets || [], renderCustomBullets);
+
         addBulletBtn.addEventListener('click', function () {
             pushHistory();
             if (!cs.bullets) cs.bullets = [];
             cs.bullets.push('');
-            bulletList.innerHTML = cs.bullets.map(buildBulletHTML).join('');
+            renderCustomBullets();
             notifyChange();
             var inputs = bulletList.querySelectorAll('.bullet-input');
             if (inputs.length) inputs[inputs.length - 1].focus();
@@ -2536,7 +2600,7 @@
                 bi = parseInt(removeBtn.dataset.bi);
                 pushHistory();
                 bullets.splice(bi, 1);
-                bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                renderCustomBullets();
                 notifyChange();
             } else if (upBtn) {
                 bi = parseInt(upBtn.dataset.bi);
@@ -2545,7 +2609,7 @@
                     tmp = bullets[bi - 1];
                     bullets[bi - 1] = bullets[bi];
                     bullets[bi] = tmp;
-                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    renderCustomBullets();
                     notifyChange();
                 }
             } else if (downBtn) {
@@ -2555,7 +2619,7 @@
                     tmp = bullets[bi];
                     bullets[bi] = bullets[bi + 1];
                     bullets[bi + 1] = tmp;
-                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    renderCustomBullets();
                     notifyChange();
                 }
             }
