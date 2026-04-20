@@ -61,6 +61,9 @@ class Award:
     description: str = ""
 
 
+_DEFAULT_SECTION_ORDER = ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards']
+
+
 @dataclass
 class ResumeData:
     header: Header = field(default_factory=Header)
@@ -71,6 +74,7 @@ class ResumeData:
     certifications: list = field(default_factory=list)
     projects: list = field(default_factory=list)
     awards: list = field(default_factory=list)
+    section_order: list = field(default_factory=lambda: list(_DEFAULT_SECTION_ORDER))
 
 
 def default_resume() -> dict:
@@ -133,6 +137,7 @@ def default_resume() -> dict:
                 "description": "",
             }
         ],
+        "section_order": list(_DEFAULT_SECTION_ORDER),
     }
 
 

@@ -162,6 +162,37 @@ body {
     border-bottom-color: var(--accent);
 }
 
+/* Nav drag handle */
+.nav-drag-handle {
+    display: inline-block;
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-right: 3px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    vertical-align: middle;
+    user-select: none;
+}
+
+.sidebar-nav-btn:hover .nav-drag-handle {
+    opacity: 1;
+}
+
+.nav-drag-handle:active {
+    cursor: grabbing;
+}
+
+.sidebar-nav-btn.nav-dragging {
+    opacity: 0.4;
+}
+
+.sidebar-nav-btn.nav-drag-over {
+    background: rgba(79, 110, 247, 0.08);
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
 /* Sidebar sections */
 .sidebar-section {
     display: none;

@@ -19,20 +19,7 @@
     if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
-    // ── Section tab navigation ───────────────────
-    const navBtns = document.querySelectorAll('.sidebar-nav-btn');
-    const sections = document.querySelectorAll('.sidebar-section');
-
-    navBtns.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            navBtns.forEach(function (b) { b.classList.remove('active'); });
-            sections.forEach(function (s) { s.classList.remove('active'); });
-
-            btn.classList.add('active');
-            var target = document.getElementById('section-' + btn.dataset.section);
-            if (target) target.classList.add('active');
-        });
-    });
+    // ── Section tab navigation (dynamic — see renderSidebarNav below) ───
 
     // ── ResumePreview ────────────────────────────
     class ResumePreview {
@@ -174,14 +161,123 @@
                 .replace(/>/g, '&gt;');
         }
 
+        _renderSummaryHtml(d) {
+            if (!d.summary || d.show_summary === false) return '';
+            return '<div class="rv-section">' +
+                '<div class="rv-section-title">Summary</div>' +
+                `<div>${this._esc(d.summary)}</div>` +
+                '</div>';
+        }
+
+        _renderExperienceHtml(d) {
+            const exp = (d.experience || []).filter(e => e.company || e.title);
+            if (!exp.length) return '';
+            let html = '<div class="rv-section"><div class="rv-section-title">Experience</div>';
+            for (const e of exp) {
+                html += '<div class="rv-entry"><div class="rv-entry-header">';
+                html += `<span class="rv-entry-title">${this._esc(e.title)}</span>`;
+                const dates = [e.start_date, e.end_date].filter(Boolean).join(' \u2013 ');
+                if (dates) html += `<span class="rv-entry-date">${this._esc(dates)}</span>`;
+                html += '</div>';
+                let sub = this._esc(e.company);
+                if (e.location) sub += ` \u2014 ${this._esc(e.location)}`;
+                html += `<div class="rv-entry-sub">${sub}</div>`;
+                if (e.bullets && e.bullets.length) {
+                    html += '<ul class="rv-bullets">';
+                    for (const b of e.bullets) html += `<li>${this._esc(b)}</li>`;
+                    html += '</ul>';
+                }
+                html += '</div>';
+            }
+            return html + '</div>';
+        }
+
+        _renderEducationHtml(d) {
+            const edu = (d.education || []).filter(e => e.school);
+            if (!edu.length) return '';
+            let html = '<div class="rv-section"><div class="rv-section-title">Education</div>';
+            for (const e of edu) {
+                html += '<div class="rv-entry"><div class="rv-entry-header">';
+                html += `<span class="rv-entry-title">${this._esc(e.school)}</span>`;
+                if (e.graduation_date) html += `<span class="rv-entry-date">${this._esc(e.graduation_date)}</span>`;
+                html += '</div>';
+                const parts = [e.degree, e.field].filter(Boolean).join(', ');
+                let sub = parts;
+                if (e.gpa) sub += ` \u00b7 GPA: ${e.gpa}`;
+                if (e.honors) sub += ` \u00b7 ${e.honors}`;
+                if (sub) html += `<div class="rv-entry-sub">${this._esc(sub)}</div>`;
+                html += '</div>';
+            }
+            return html + '</div>';
+        }
+
+        _renderSkillsHtml(d) {
+            const skills = (d.skills || []).filter(s => s.category || (s.items && s.items.length));
+            if (!skills.length) return '';
+            let html = '<div class="rv-section"><div class="rv-section-title">Skills</div>';
+            for (const s of skills) {
+                html += '<div class="rv-skill-row">';
+                if (s.category) html += `<span class="rv-skill-cat">${this._esc(s.category)}:</span> `;
+                html += this._esc((s.items || []).join(', '));
+                html += '</div>';
+            }
+            return html + '</div>';
+        }
+
+        _renderProjectsHtml(d) {
+            const projects = (d.projects || []).filter(p => p.name);
+            if (!projects.length || d.show_projects === false) return '';
+            let html = '<div class="rv-section"><div class="rv-section-title">Projects</div>';
+            for (const p of projects) {
+                html += '<div class="rv-entry"><div class="rv-entry-header">';
+                html += `<span class="rv-entry-title">${this._esc(p.name)}</span>`;
+                if (p.url) html += `<span class="rv-entry-date">${this._esc(p.url)}</span>`;
+                html += '</div>';
+                if (p.technologies) html += `<div class="rv-entry-sub">${this._esc(p.technologies)}</div>`;
+                if (p.description) html += `<div style="margin-top:2pt">${this._esc(p.description)}</div>`;
+                html += '</div>';
+            }
+            return html + '</div>';
+        }
+
+        _renderCertificationsHtml(d) {
+            const certs = (d.certifications || []).filter(c => c.name);
+            if (!certs.length || d.show_certifications === false) return '';
+            let html = '<div class="rv-section"><div class="rv-section-title">Certifications</div>';
+            for (const c of certs) {
+                html += '<div class="rv-cert"><div class="rv-entry-header">';
+                html += `<span class="rv-cert-name">${this._esc(c.name)}</span>`;
+                if (c.date) html += `<span class="rv-entry-date">${this._esc(c.date)}</span>`;
+                html += '</div>';
+                if (c.issuer) html += `<div class="rv-entry-sub">${this._esc(c.issuer)}</div>`;
+                html += '</div>';
+            }
+            return html + '</div>';
+        }
+
+        _renderAwardsHtml(d) {
+            const awards = (d.awards || []).filter(a => a.name);
+            if (!awards.length || d.show_awards === false) return '';
+            let html = '<div class="rv-section"><div class="rv-section-title">Awards</div>';
+            for (const a of awards) {
+                html += '<div class="rv-entry"><div class="rv-entry-header">';
+                html += `<span class="rv-entry-title">${this._esc(a.name)}</span>`;
+                if (a.date) html += `<span class="rv-entry-date">${this._esc(a.date)}</span>`;
+                html += '</div>';
+                if (a.issuer) html += `<div class="rv-entry-sub">${this._esc(a.issuer)}</div>`;
+                if (a.description) html += `<div style="margin-top:2pt">${this._esc(a.description)}</div>`;
+                html += '</div>';
+            }
+            return html + '</div>';
+        }
+
         _render() {
             const d = this.data;
             if (!d) return;
-            let html = '';
 
-            // Header
+            // Header always first
             const h = d.header || {};
-            html += '<div class="rv-header">';
+            let html = '<div class="rv-header">';
             html += `<div class="rv-name">${this._esc(h.name)}</div>`;
             html += '<div class="rv-contact">';
             if (h.email) html += `<span>${this._esc(h.email)}</span>`;
@@ -191,129 +287,30 @@
             if (h.website) html += `<span>${this._esc(h.website)}</span>`;
             html += '</div></div>';
 
-            // Summary
-            if (d.summary && d.show_summary !== false) {
-                html += '<div class="rv-section">';
-                html += '<div class="rv-section-title">Summary</div>';
-                html += `<div>${this._esc(d.summary)}</div>`;
-                html += '</div>';
-            }
-
-            // Experience
-            const exp = (d.experience || []).filter(e => e.company || e.title);
-            if (exp.length) {
-                html += '<div class="rv-section">';
-                html += '<div class="rv-section-title">Experience</div>';
-                for (const e of exp) {
-                    html += '<div class="rv-entry">';
-                    html += '<div class="rv-entry-header">';
-                    html += `<span class="rv-entry-title">${this._esc(e.title)}</span>`;
-                    const dates = [e.start_date, e.end_date].filter(Boolean).join(' \u2013 ');
-                    if (dates) html += `<span class="rv-entry-date">${this._esc(dates)}</span>`;
-                    html += '</div>';
-                    let sub = this._esc(e.company);
-                    if (e.location) sub += ` \u2014 ${this._esc(e.location)}`;
-                    html += `<div class="rv-entry-sub">${sub}</div>`;
-                    if (e.bullets && e.bullets.length) {
-                        html += '<ul class="rv-bullets">';
-                        for (const b of e.bullets) html += `<li>${this._esc(b)}</li>`;
-                        html += '</ul>';
-                    }
-                    html += '</div>';
+            // Remaining sections in user-defined order
+            const order = d.section_order || ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards'];
+            for (const section of order) {
+                switch (section) {
+                    case 'summary':        html += this._renderSummaryHtml(d); break;
+                    case 'experience':     html += this._renderExperienceHtml(d); break;
+                    case 'education':      html += this._renderEducationHtml(d); break;
+                    case 'skills':         html += this._renderSkillsHtml(d); break;
+                    case 'projects':       html += this._renderProjectsHtml(d); break;
+                    case 'certifications': html += this._renderCertificationsHtml(d); break;
+                    case 'awards':         html += this._renderAwardsHtml(d); break;
                 }
-                html += '</div>';
-            }
-
-            // Education
-            const edu = (d.education || []).filter(e => e.school);
-            if (edu.length) {
-                html += '<div class="rv-section">';
-                html += '<div class="rv-section-title">Education</div>';
-                for (const e of edu) {
-                    html += '<div class="rv-entry">';
-                    html += '<div class="rv-entry-header">';
-                    html += `<span class="rv-entry-title">${this._esc(e.school)}</span>`;
-                    if (e.graduation_date) html += `<span class="rv-entry-date">${this._esc(e.graduation_date)}</span>`;
-                    html += '</div>';
-                    const parts = [e.degree, e.field].filter(Boolean).join(', ');
-                    let sub = parts;
-                    if (e.gpa) sub += ` \u00b7 GPA: ${e.gpa}`;
-                    if (e.honors) sub += ` \u00b7 ${e.honors}`;
-                    if (sub) html += `<div class="rv-entry-sub">${this._esc(sub)}</div>`;
-                    html += '</div>';
-                }
-                html += '</div>';
-            }
-
-            // Skills
-            const skills = (d.skills || []).filter(s => s.category || (s.items && s.items.length));
-            if (skills.length) {
-                html += '<div class="rv-section">';
-                html += '<div class="rv-section-title">Skills</div>';
-                for (const s of skills) {
-                    html += '<div class="rv-skill-row">';
-                    if (s.category) html += `<span class="rv-skill-cat">${this._esc(s.category)}:</span> `;
-                    html += this._esc((s.items || []).join(', '));
-                    html += '</div>';
-                }
-                html += '</div>';
-            }
-
-            // Projects
-            const projects = (d.projects || []).filter(p => p.name);
-            if (projects.length && d.show_projects !== false) {
-                html += '<div class="rv-section">';
-                html += '<div class="rv-section-title">Projects</div>';
-                for (const p of projects) {
-                    html += '<div class="rv-entry">';
-                    html += '<div class="rv-entry-header">';
-                    html += `<span class="rv-entry-title">${this._esc(p.name)}</span>`;
-                    if (p.url) html += `<span class="rv-entry-date">${this._esc(p.url)}</span>`;
-                    html += '</div>';
-                    if (p.technologies) html += `<div class="rv-entry-sub">${this._esc(p.technologies)}</div>`;
-                    if (p.description) html += `<div style="margin-top:2pt">${this._esc(p.description)}</div>`;
-                    html += '</div>';
-                }
-                html += '</div>';
-            }
-
-            // Certifications
-            const certs = (d.certifications || []).filter(c => c.name);
-            if (certs.length && d.show_certifications !== false) {
-                html += '<div class="rv-section">';
-                html += '<div class="rv-section-title">Certifications</div>';
-                for (const c of certs) {
-                    html += '<div class="rv-cert">';
-                    html += '<div class="rv-entry-header">';
-                    html += `<span class="rv-cert-name">${this._esc(c.name)}</span>`;
-                    if (c.date) html += `<span class="rv-entry-date">${this._esc(c.date)}</span>`;
-                    html += '</div>';
-                    if (c.issuer) html += `<div class="rv-entry-sub">${this._esc(c.issuer)}</div>`;
-                    html += '</div>';
-                }
-                html += '</div>';
-            }
-
-            // Awards
-            const awards = (d.awards || []).filter(a => a.name);
-            if (awards.length && d.show_awards !== false) {
-                html += '<div class="rv-section">';
-                html += '<div class="rv-section-title">Awards</div>';
-                for (const a of awards) {
-                    html += '<div class="rv-entry">';
-                    html += '<div class="rv-entry-header">';
-                    html += `<span class="rv-entry-title">${this._esc(a.name)}</span>`;
-                    if (a.date) html += `<span class="rv-entry-date">${this._esc(a.date)}</span>`;
-                    html += '</div>';
-                    if (a.issuer) html += `<div class="rv-entry-sub">${this._esc(a.issuer)}</div>`;
-                    if (a.description) html += `<div style="margin-top:2pt">${this._esc(a.description)}</div>`;
-                    html += '</div>';
-                }
-                html += '</div>';
             }
 
             // Show placeholder if nothing was rendered
-            if (!html.trim() || (!h.name && !d.summary && !exp.length && !edu.length && !skills.length && !projects.length && !certs.length && !awards.length)) {
+            const hasContent = h.name || d.summary ||
+                (d.experience || []).some(e => e.company || e.title) ||
+                (d.education || []).some(e => e.school) ||
+                (d.skills || []).some(s => s.category || (s.items && s.items.length)) ||
+                (d.projects || []).some(p => p.name) ||
+                (d.certifications || []).some(c => c.name) ||
+                (d.awards || []).some(a => a.name);
+
+            if (!hasContent) {
                 this.page.innerHTML = '<p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>';
                 return;
             }
@@ -323,6 +320,18 @@
     }
 
     // ── Default state ────────────────────────────
+    var DEFAULT_SECTION_ORDER = ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards'];
+
+    var SECTION_META = {
+        summary:        { label: 'Summary' },
+        experience:     { label: 'Experience' },
+        education:      { label: 'Education' },
+        skills:         { label: 'Skills' },
+        projects:       { label: 'Projects' },
+        certifications: { label: 'Certs' },
+        awards:         { label: 'Awards' },
+    };
+
     function defaultData() {
         return {
             header: { name: '', email: '', phone: '', location: '', linkedin: '', website: '' },
@@ -337,6 +346,7 @@
             show_projects: true,
             awards: [],
             show_awards: true,
+            section_order: DEFAULT_SECTION_ORDER.slice(),
         };
     }
 
@@ -371,6 +381,108 @@
     function notifyChange() {
         preview.update(state.data, state.typo);
     }
+
+    // ── Sidebar nav (dynamic, ordered by section_order) ─────────────────
+    function renderSidebarNav() {
+        var nav = document.getElementById('sidebarNav');
+        if (!nav) return;
+
+        // Track which section is currently active
+        var activeBtn = nav.querySelector('.sidebar-nav-btn.active');
+        var activeSection = activeBtn ? activeBtn.dataset.section : 'header';
+
+        // Remove all non-contact buttons
+        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"])')).forEach(function (b) {
+            nav.removeChild(b);
+        });
+
+        // Add buttons in section_order order, each with a drag handle
+        var order = state.data.section_order || DEFAULT_SECTION_ORDER;
+        order.forEach(function (key) {
+            var meta = SECTION_META[key];
+            if (!meta) return;
+            var btn = document.createElement('button');
+            btn.className = 'sidebar-nav-btn' + (activeSection === key ? ' active' : '');
+            btn.dataset.section = key;
+            btn.innerHTML = '<span class="nav-drag-handle" title="Drag to reorder">⠿</span>' + meta.label;
+            nav.appendChild(btn);
+        });
+
+        bindNavClicks();
+        bindNavDragDrop();
+    }
+
+    function bindNavClicks() {
+        var nav = document.getElementById('sidebarNav');
+        if (!nav) return;
+        var allNavBtns = nav.querySelectorAll('.sidebar-nav-btn');
+        var allSections = document.querySelectorAll('.sidebar-section');
+
+        allNavBtns.forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                if (e.target.closest('.nav-drag-handle')) return;
+                allNavBtns.forEach(function (b) { b.classList.remove('active'); });
+                allSections.forEach(function (s) { s.classList.remove('active'); });
+                btn.classList.add('active');
+                var target = document.getElementById('section-' + btn.dataset.section);
+                if (target) target.classList.add('active');
+            });
+        });
+    }
+
+    function bindNavDragDrop() {
+        var nav = document.getElementById('sidebarNav');
+        if (!nav) return;
+        var draggable = nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"])');
+        var dragSrcKey = null;
+
+        draggable.forEach(function (btn) {
+            btn.draggable = true;
+
+            btn.addEventListener('dragstart', function (e) {
+                dragSrcKey = btn.dataset.section;
+                btn.classList.add('nav-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            btn.addEventListener('dragend', function () {
+                btn.classList.remove('nav-dragging');
+                draggable.forEach(function (b) { b.classList.remove('nav-drag-over'); });
+                dragSrcKey = null;
+            });
+
+            btn.addEventListener('dragover', function (e) {
+                if (!dragSrcKey || dragSrcKey === btn.dataset.section) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                draggable.forEach(function (b) { b.classList.remove('nav-drag-over'); });
+                btn.classList.add('nav-drag-over');
+            });
+
+            btn.addEventListener('dragleave', function () {
+                btn.classList.remove('nav-drag-over');
+            });
+
+            btn.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dstKey = btn.dataset.section;
+                if (dragSrcKey && dragSrcKey !== dstKey) {
+                    var order = state.data.section_order;
+                    var srcIdx = order.indexOf(dragSrcKey);
+                    var dstIdx = order.indexOf(dstKey);
+                    if (srcIdx !== -1 && dstIdx !== -1) {
+                        var moved = order.splice(srcIdx, 1)[0];
+                        order.splice(dstIdx, 0, moved);
+                        renderSidebarNav();
+                        notifyChange();
+                    }
+                }
+                dragSrcKey = null;
+            });
+        });
+    }
+
+    renderSidebarNav();
 
     // ── Form bindings — contact ──────────────────
     function bindField(id, path) {
