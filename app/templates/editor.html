@@ -127,7 +127,7 @@
                         </button>
                     </div>
                 </div>
-                <button class="toolbar-btn toolbar-btn--autofit" id="autoFitBtn" title="Auto-fit content to one page">
+                <button class="toolbar-btn toolbar-btn--autofit" id="autoFitBtn" title="Automatically adjust typography to fit one page">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M7 1v3M7 10v3M1 7h3M10 7h3M3.22 3.22l2.12 2.12M8.66 8.66l2.12 2.12M3.22 10.78l2.12-2.12M8.66 5.34l2.12-2.12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                     </svg>
@@ -253,7 +253,7 @@
                 <div class="sidebar-section" id="section-summary">
                     <div class="section-header">
                         <h2 class="section-title">Professional Summary</h2>
-                        <label class="summary-toggle" title="Show on resume">
+                        <label class="summary-toggle" title="Hide this section from the resume">
                             <input type="checkbox" id="summaryVisible" checked>
                             <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         </label>
@@ -298,7 +298,7 @@
                 <div class="sidebar-section" id="section-projects">
                     <div class="section-header">
                         <h2 class="section-title">Projects</h2>
-                        <label class="summary-toggle" title="Show on resume">
+                        <label class="summary-toggle" title="Hide this section from the resume">
                             <input type="checkbox" id="projectsVisible" checked>
                             <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         </label>
@@ -312,7 +312,7 @@
                 <div class="sidebar-section" id="section-certifications">
                     <div class="section-header">
                         <h2 class="section-title">Certifications</h2>
-                        <label class="summary-toggle" title="Show on resume">
+                        <label class="summary-toggle" title="Hide this section from the resume">
                             <input type="checkbox" id="certsVisible" checked>
                             <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         </label>
@@ -325,7 +325,7 @@
                 <div class="sidebar-section" id="section-awards">
                     <div class="section-header">
                         <h2 class="section-title">Awards</h2>
-                        <label class="summary-toggle" title="Show on resume">
+                        <label class="summary-toggle" title="Hide this section from the resume">
                             <input type="checkbox" id="awardsVisible" checked>
                             <span class="toggle-track"><span class="toggle-thumb"></span></span>
                         </label>
@@ -342,7 +342,7 @@
                 <div class="sidebar-tab-pane" id="tabPane-ats">
                 <div class="sidebar-section active" id="section-ats">
                     <div class="section-header">
-                        <h2 class="section-title">ATS Score</h2>
+                        <h2 class="section-title">ATS Score <span class="ats-info-icon" title="Score is based on: keyword density (40%), formatting compatibility (30%), section completeness (20%), and contact info (10%). Scores above 80 are considered ATS-friendly." aria-label="ATS scoring methodology">ⓘ</span></h2>
                     </div>
                     <div class="ats-gauge-wrap" id="atsGaugeWrap">
                         <svg class="ats-gauge" viewBox="0 0 100 100" width="120" height="120" aria-hidden="true">
@@ -545,28 +545,28 @@
                             <label class="field-label" for="typoSizeName">Name</label>
                             <input class="typo-number" type="number" id="typoSizeNameNum" min="14" max="28" step="0.5" value="20">
                         </div>
-                        <input class="typo-slider" type="range" id="typoSizeName" min="14" max="28" step="0.5" value="20">
+                        <input class="typo-slider" type="range" id="typoSizeName" min="14" max="28" step="0.5" value="20" title="Name font size — controls how large your name appears at the top of the resume (14–28pt)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoSizeSectionHeader">Section Headers</label>
                             <span class="typo-value" id="typoSizeSectionHeaderVal">12pt</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoSizeSectionHeader" min="10" max="16" step="0.5" value="12">
+                        <input class="typo-slider" type="range" id="typoSizeSectionHeader" min="10" max="16" step="0.5" value="12" title="Section header font size — affects Experience, Education, Skills, and other section titles (10–16pt)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoSizeBody">Body</label>
                             <span class="typo-value" id="typoSizeBodyVal">10pt</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoSizeBody" min="8" max="12" step="0.5" value="10">
+                        <input class="typo-slider" type="range" id="typoSizeBody" min="8" max="12" step="0.5" value="10" title="Body font size — affects bullet points, summary text, and main content (8–12pt)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoSizeDetail">Details</label>
                             <span class="typo-value" id="typoSizeDetailVal">9pt</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoSizeDetail" min="7" max="11" step="0.5" value="9">
+                        <input class="typo-slider" type="range" id="typoSizeDetail" min="7" max="11" step="0.5" value="9" title="Details font size — affects dates, locations, and secondary information (7–11pt)">
                     </div>
                     <div class="typo-group-label">Spacing</div>
                     <div class="field-group">
@@ -574,21 +574,21 @@
                             <label class="field-label" for="typoLineHeight">Line Height</label>
                             <span class="typo-value" id="typoLineHeightVal">1.15</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoLineHeight" min="1.0" max="2.0" step="0.05" value="1.15">
+                        <input class="typo-slider" type="range" id="typoLineHeight" min="1.0" max="2.0" step="0.05" value="1.15" title="Line height — controls vertical space between lines of text; lower values fit more content, higher values improve readability (1.0–2.0)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoParagraphSpacing">Paragraph Spacing</label>
                             <span class="typo-value" id="typoParagraphSpacingVal">4pt</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoParagraphSpacing" min="0" max="12" step="0.5" value="4">
+                        <input class="typo-slider" type="range" id="typoParagraphSpacing" min="0" max="12" step="0.5" value="4" title="Paragraph spacing — extra vertical space added between bullet points and paragraphs (0–12pt)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoSectionSpacing">Section Spacing</label>
                             <span class="typo-value" id="typoSectionSpacingVal">10pt</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoSectionSpacing" min="4" max="20" step="0.5" value="10">
+                        <input class="typo-slider" type="range" id="typoSectionSpacing" min="4" max="20" step="0.5" value="10" title="Section spacing — vertical gap between major resume sections like Experience and Education (4–20pt)">
                     </div>
                     <div class="typo-group-label">Margins</div>
                     <div class="field-group">
@@ -605,28 +605,28 @@
                             <label class="field-label" for="typoMarginTop">Top</label>
                             <span class="typo-value" id="typoMarginTopVal">0.5in</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoMarginTop" min="0.25" max="1.5" step="0.05" value="0.5">
+                        <input class="typo-slider" type="range" id="typoMarginTop" min="0.25" max="1.5" step="0.05" value="0.5" title="Top margin — white space at the top of the page (0.25–1.5 inches)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoMarginBottom">Bottom</label>
                             <span class="typo-value" id="typoMarginBottomVal">0.5in</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoMarginBottom" min="0.25" max="1.5" step="0.05" value="0.5">
+                        <input class="typo-slider" type="range" id="typoMarginBottom" min="0.25" max="1.5" step="0.05" value="0.5" title="Bottom margin — white space at the bottom of the page (0.25–1.5 inches)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoMarginLeft">Left</label>
                             <span class="typo-value" id="typoMarginLeftVal">0.6in</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoMarginLeft" min="0.3" max="1.5" step="0.05" value="0.6">
+                        <input class="typo-slider" type="range" id="typoMarginLeft" min="0.3" max="1.5" step="0.05" value="0.6" title="Left margin — white space on the left side of the page (0.3–1.5 inches)">
                     </div>
                     <div class="field-group">
                         <div class="typo-label-row">
                             <label class="field-label" for="typoMarginRight">Right</label>
                             <span class="typo-value" id="typoMarginRightVal">0.6in</span>
                         </div>
-                        <input class="typo-slider" type="range" id="typoMarginRight" min="0.3" max="1.5" step="0.05" value="0.6">
+                        <input class="typo-slider" type="range" id="typoMarginRight" min="0.3" max="1.5" step="0.05" value="0.6" title="Right margin — white space on the right side of the page (0.3–1.5 inches)">
                     </div>
                 </div>
                 </div><!-- /tabPane-typography -->
