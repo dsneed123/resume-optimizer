@@ -81,6 +81,10 @@ _STANDARD_HEADINGS: dict[str, dict] = {
     },
 }
 
+_PAGE_HEIGHT_PT = 792.0  # US Letter
+_USABLE_HEIGHT_PT = _PAGE_HEIGHT_PT - 72.0  # 0.5-inch top + bottom margins
+_AVAILABLE_WIDTH_PT = 612.0 - 86.4  # 0.6-inch left + right margins
+
 _MONTH_YEAR_RE = re.compile(
     r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}\b',
     re.IGNORECASE,
@@ -427,6 +431,120 @@ def _check_skills_analysis(resume_data: dict) -> tuple[bool, list[str]]:
     return len(issues) == 0, issues
 
 
+def _estimate_content_height(resume_data: dict) -> float:
+    """Estimate resume content height in points using default typography."""
+    body_sz, detail_sz, sec_sz, name_sz = 10.0, 9.0, 12.0, 20.0
+    line_h, para_sp, sec_sp, bullet_indent = 1.15, 4.0, 10.0, 12.0
+
+    def _lines(text: str, indent: float = 0.0) -> int:
+        if not text:
+            return 0
+        cpl = max(1, (_AVAILABLE_WIDTH_PT - indent) / (body_sz * 0.55))
+        raw = len(text) / cpl
+        return max(1, int(raw) + (1 if raw % 1 > 0 else 0))
+
+    h = 0.0
+    header = resume_data.get("header") or {}
+    h += name_sz * line_h
+    contact = " | ".join(
+        p for p in [
+            header.get("email", ""), header.get("phone", ""), header.get("location", ""),
+            header.get("linkedin", ""), header.get("website", ""),
+        ] if p
+    )
+    h += _lines(contact) * body_sz * line_h + sec_sp
+
+    summary = resume_data.get("summary")
+    if summary:
+        h += sec_sz * line_h + 2 + _lines(str(summary)) * body_sz * line_h + para_sp + sec_sp
+
+    experience = resume_data.get("experience") or []
+    if experience:
+        h += sec_sz * line_h + 4
+        for exp in experience:
+            if not isinstance(exp, dict):
+                continue
+            h += body_sz * line_h + detail_sz * line_h
+            for bullet in (exp.get("bullets") or []):
+                h += _lines(str(bullet), bullet_indent) * body_sz * line_h
+            h += para_sp
+        h += sec_sp
+
+    education = resume_data.get("education") or []
+    if education:
+        h += sec_sz * line_h + 4
+        for edu in education:
+            if not isinstance(edu, dict):
+                continue
+            h += body_sz * line_h + detail_sz * line_h
+            if edu.get("honors") or edu.get("gpa"):
+                h += detail_sz * line_h
+            h += para_sp
+        h += sec_sp
+
+    skills = resume_data.get("skills") or []
+    if skills:
+        h += sec_sz * line_h + 4
+        for skill in skills:
+            if not isinstance(skill, dict):
+                continue
+            text = (skill.get("category") or "") + ": " + ", ".join(skill.get("items") or [])
+            h += _lines(text) * body_sz * line_h + para_sp
+        h += sec_sp
+
+    certifications = resume_data.get("certifications") or []
+    if certifications:
+        h += sec_sz * line_h + 4
+        for _ in certifications:
+            h += body_sz * line_h + detail_sz * line_h + para_sp
+        h += sec_sp
+
+    projects = resume_data.get("projects") or []
+    if projects:
+        h += sec_sz * line_h + 4
+        for proj in projects:
+            if not isinstance(proj, dict):
+                continue
+            h += body_sz * line_h
+            if proj.get("description"):
+                h += _lines(proj["description"]) * body_sz * line_h
+            if proj.get("technologies"):
+                h += detail_sz * line_h
+            h += para_sp
+        h += sec_sp
+
+    awards = resume_data.get("awards") or []
+    if awards:
+        h += sec_sz * line_h + 4
+        for award in awards:
+            if not isinstance(award, dict):
+                continue
+            h += body_sz * line_h
+            if award.get("description"):
+                h += _lines(award["description"]) * body_sz * line_h
+            h += para_sp
+        h += sec_sp
+
+    return h
+
+
+def _check_resume_length_density(resume_data: dict) -> tuple[bool, list[str]]:
+    """Flag resumes that are too sparse (< 30% page fill) or overflow one page."""
+    fill_ratio = _estimate_content_height(resume_data) / _USABLE_HEIGHT_PT
+    issues = []
+    if fill_ratio < 0.30:
+        issues.append(
+            f"Resume content fills only {int(fill_ratio * 100)}% of the page. "
+            "Add more experience details, projects, or skills to make better use of the space."
+        )
+    elif fill_ratio > 1.0:
+        issues.append(
+            "Resume content exceeds one page. "
+            "Trim bullets or reduce experience entries to fit within a single page."
+        )
+    return len(issues) == 0, issues
+
+
 def _check_section_headings(resume_data: dict) -> tuple[bool, list[str]]:
     """Flag non-standard section headings; each costs -5 in the caller."""
     section_headings = resume_data.get("section_headings")
@@ -460,6 +578,7 @@ _CHECKS = [
     (_check_summary_present, 15),
     (_check_skills_present, 10),
     (_check_experience_bullets, 10),
+    (_check_resume_length_density, 10),
 ]
 
 
@@ -546,6 +665,31 @@ def suggest_improvements(resume_data: dict) -> list[str]:
         suggestions.append(
             "Expand your summary to at least 20 words to give ATS more keyword surface area."
         )
+
+    for exp in resume_data.get("experience") or []:
+        if not isinstance(exp, dict):
+            continue
+        company = exp.get("company") or "a role"
+        bullets = [b for b in (exp.get("bullets") or []) if isinstance(b, str) and b.strip()]
+        n = len(bullets)
+        if n < 3:
+            suggestions.append(
+                f"Experience at '{company}' has only {n} bullet(s). "
+                "Aim for 3–5 bullets to fully showcase your impact."
+            )
+        elif n > 5:
+            suggestions.append(
+                f"Experience at '{company}' has {n} bullets. "
+                "Reduce to 3–5 focused bullets for better readability."
+            )
+
+    if not (resume_data.get("summary") or "").strip():
+        fill_ratio = _estimate_content_height(resume_data) / _USABLE_HEIGHT_PT
+        if fill_ratio < 0.70:
+            suggestions.append(
+                "There is space on your resume to add a professional summary. "
+                "A summary helps ATS systems match your profile to job descriptions."
+            )
 
     suggestions.extend(result["issues"])
     return suggestions

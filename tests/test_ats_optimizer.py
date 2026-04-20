@@ -17,6 +17,9 @@ from app.services.ats_optimizer import (
     _check_section_headings,
     _check_date_consistency,
     _check_skills_analysis,
+    _check_resume_length_density,
+    _estimate_content_height,
+    _USABLE_HEIGHT_PT,
 )
 
 
@@ -826,3 +829,177 @@ def test_skills_analysis_non_list_skills_passes():
     passed, issues = _check_skills_analysis({"skills": "not a list"})
     assert passed
     assert issues == []
+
+
+# --- _check_resume_length_density ---
+
+def test_length_density_perfect_resume_passes():
+    passed, issues = _check_resume_length_density(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_length_density_full_resume_above_30_pct():
+    height = _estimate_content_height(_full_resume())
+    fill = height / _USABLE_HEIGHT_PT
+    assert fill >= 0.30
+
+
+def test_length_density_sparse_resume_flagged():
+    # Header-only resume is well below 30% fill
+    data = {
+        "header": {
+            "name": "Jane Smith",
+            "email": "jane@example.com",
+            "phone": "555-123-4567",
+            "location": "",
+            "linkedin": "",
+            "website": "",
+        }
+    }
+    passed, issues = _check_resume_length_density(data)
+    assert not passed
+    assert any("%" in i for i in issues)
+    assert any("sparse" in i.lower() or "fill" in i.lower() or "%" in i for i in issues)
+
+
+def test_length_density_sparse_issue_mentions_percentage():
+    data = {"header": {"name": "Jane Smith", "email": "j@x.com", "phone": "555-000-0000"}}
+    passed, issues = _check_resume_length_density(data)
+    assert not passed
+    assert any("%" in i for i in issues)
+
+
+def test_length_density_overflow_flagged():
+    data = _full_resume()
+    # Add many experience entries with many bullets to overflow one page
+    extra_exp = [
+        {
+            "company": f"Company {i}",
+            "title": "Engineer",
+            "location": "NY",
+            "start_date": "January 2010",
+            "end_date": "December 2011",
+            "bullets": [
+                "Led migration of 5 legacy systems to microservices, cutting latency by 40%.",
+                "Mentored team of 8 engineers across three product squads, improving velocity by 20%.",
+                "Designed automated CI/CD pipeline that reduced deployment time by 35%.",
+                "Refactored authentication module, reducing login errors by 50% across 3 services.",
+                "Shipped 12 features in Q3, contributing to 15% increase in user retention.",
+            ],
+        }
+        for i in range(10)
+    ]
+    data["experience"] = extra_exp
+    passed, issues = _check_resume_length_density(data)
+    assert not passed
+    assert any("exceed" in i.lower() or "one page" in i.lower() for i in issues)
+
+
+def test_length_density_overflow_not_sparse():
+    data = _full_resume()
+    extra_exp = [
+        {
+            "company": f"Company {i}",
+            "title": "Engineer",
+            "location": "NY",
+            "start_date": "January 2010",
+            "end_date": "December 2011",
+            "bullets": [
+                "Led migration of legacy systems to microservices, cutting latency by 40%.",
+                "Mentored team of 8 engineers, improving velocity by 20%.",
+            ],
+        }
+        for i in range(10)
+    ]
+    data["experience"] = extra_exp
+    passed, issues = _check_resume_length_density(data)
+    # Should report overflow, not sparse
+    assert not any("%" in i and "fill" in i.lower() for i in issues) or any(
+        "exceed" in i.lower() for i in issues
+    )
+
+
+def test_length_density_penalty_ten():
+    # Header-only resume is sparse — should incur -10
+    data = {
+        "header": {
+            "name": "Jane Smith",
+            "email": "jane@example.com",
+            "phone": "555-123-4567",
+            "location": "",
+            "linkedin": "",
+            "website": "",
+        }
+    }
+    result = analyze_ats_score(data)
+    assert result["score"] < 100
+    assert any("fill" in i.lower() or "%" in i for i in result["issues"])
+
+
+def test_length_density_sparse_and_overflow_mutually_exclusive():
+    # Confirm sparse and overflow can't both fire simultaneously
+    data = _full_resume()
+    passed, issues = _check_resume_length_density(data)
+    sparse = any("fill" in i.lower() or "%" in i for i in issues)
+    overflow = any("exceed" in i.lower() or "one page" in i.lower() for i in issues)
+    assert not (sparse and overflow)
+
+
+# --- suggest_improvements: bullet count and summary-with-room ---
+
+def test_suggest_improvements_few_bullets_advisory():
+    data = _full_resume()
+    # _full_resume has 2 bullets at Acme Corp → < 3 advisory
+    suggestions = suggest_improvements(data)
+    assert any("bullet" in s.lower() or "3" in s for s in suggestions)
+
+
+def test_suggest_improvements_many_bullets_advisory():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = [
+        "Led migration of 5 legacy systems to microservices, cutting latency by 40%.",
+        "Mentored team of 8 engineers, improving velocity by 20%.",
+        "Designed CI/CD pipeline reducing deployment time by 35%.",
+        "Refactored authentication module, reducing login errors by 50%.",
+        "Shipped 12 features in Q3, boosting retention by 15%.",
+        "Optimized database queries, improving response time by 25% across 4 services.",
+    ]
+    suggestions = suggest_improvements(data)
+    assert any("reduce" in s.lower() or "3" in s or "5" in s for s in suggestions)
+
+
+def test_suggest_improvements_summary_room_advisory():
+    data = _full_resume()
+    data["summary"] = ""
+    data["experience"] = []
+    data["education"] = []
+    data["skills"] = []
+    suggestions = suggest_improvements(data)
+    assert any("summary" in s.lower() for s in suggestions)
+
+
+def test_suggest_improvements_summary_no_room_no_advisory():
+    data = _full_resume()
+    data["summary"] = ""
+    # Fill page so there's no room
+    extra_exp = [
+        {
+            "company": f"Company {i}",
+            "title": "Engineer",
+            "location": "NY",
+            "start_date": "January 2010",
+            "end_date": "December 2011",
+            "bullets": [
+                "Led migration of 5 legacy systems to microservices, cutting latency by 40%.",
+                "Mentored team of 8 engineers, improving velocity by 20%.",
+                "Designed CI/CD pipeline reducing deployment time by 35%.",
+            ],
+        }
+        for i in range(12)
+    ]
+    data["experience"] = extra_exp
+    suggestions = suggest_improvements(data)
+    # Should not suggest adding summary when page is full
+    room_suggestions = [s for s in suggestions if "space" in s.lower() and "summary" in s.lower()]
+    assert len(room_suggestions) == 0
