@@ -188,6 +188,40 @@
                 .replace(/>/g, '&gt;');
         }
 
+        _formatDate(dateStr, fmt) {
+            if (!dateStr) return dateStr;
+            const s = dateStr.trim();
+            if (!s || s.toLowerCase() === 'present') return s;
+            const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            let month = null;
+            let year = null;
+            for (let i = 0; i < MONTHS_FULL.length; i++) {
+                if (s.toLowerCase().startsWith(MONTHS_FULL[i].toLowerCase()) ||
+                    s.toLowerCase().startsWith(MONTHS_SHORT[i].toLowerCase())) {
+                    month = i + 1;
+                    const rest = s.replace(/^[A-Za-z]+\s*/, '');
+                    year = parseInt(rest, 10) || null;
+                    break;
+                }
+            }
+            if (!month) {
+                let m;
+                m = s.match(/^(\d{1,2})\/(\d{4})$/);
+                if (m) { month = parseInt(m[1], 10); year = parseInt(m[2], 10); }
+                if (!month) { m = s.match(/^(\d{4})-(\d{2})$/); if (m) { year = parseInt(m[1], 10); month = parseInt(m[2], 10); } }
+                if (!month) { m = s.match(/^(\d{4})$/); if (m) { year = parseInt(m[1], 10); } }
+            }
+            if (!year) return s;
+            switch (fmt) {
+                case 'MMM YYYY':  return month ? MONTHS_SHORT[month - 1] + ' ' + year : String(year);
+                case 'MMMM YYYY': return month ? MONTHS_FULL[month - 1] + ' ' + year : String(year);
+                case 'MM/YYYY':   return month ? String(month).padStart(2, '0') + '/' + year : String(year);
+                case 'YYYY':      return String(year);
+                default:          return s;
+            }
+        }
+
         _renderSummaryHtml(d) {
             if (!d.summary || d.show_summary === false) return '';
             return '<div class="rv-section">' +
@@ -206,7 +240,8 @@
                 if (e.company) html += ` | ${this._esc(e.company)}`;
                 if (e.location) html += ` \u00b7 ${this._esc(e.location)}`;
                 html += '</span>';
-                const dates = [e.start_date, e.end_date].filter(Boolean).join(' \u2013 ');
+                const fmt = (this.typo && this.typo.date_format) || 'MMM YYYY';
+                const dates = [e.start_date, e.end_date].filter(Boolean).map(d => this._formatDate(d, fmt)).join(' \u2013 ');
                 if (dates) html += `<span class="rv-entry-date">${this._esc(dates)}</span>`;
                 html += '</div>';
                 if (e.bullets && e.bullets.length) {
@@ -229,7 +264,7 @@
                 if (e.degree) html += ` \u00b7 ${this._esc(e.degree)}`;
                 if (e.field) html += `, ${this._esc(e.field)}`;
                 html += '</span>';
-                if (e.graduation_date) html += `<span class="rv-entry-date">${this._esc(e.graduation_date)}</span>`;
+                if (e.graduation_date) { const fmt2 = (this.typo && this.typo.date_format) || 'MMM YYYY'; html += `<span class="rv-entry-date">${this._esc(this._formatDate(e.graduation_date, fmt2))}</span>`; }
                 html += '</div>';
                 if (e.gpa || e.honors) {
                     let sub = '';
@@ -280,7 +315,7 @@
             for (const c of certs) {
                 html += '<div class="rv-cert"><div class="rv-entry-header">';
                 html += `<span class="rv-cert-name">${this._esc(c.name)}</span>`;
-                if (c.date) html += `<span class="rv-entry-date">${this._esc(c.date)}</span>`;
+                if (c.date) { const fmtC = (this.typo && this.typo.date_format) || 'MMM YYYY'; html += `<span class="rv-entry-date">${this._esc(this._formatDate(c.date, fmtC))}</span>`; }
                 html += '</div>';
                 if (c.issuer) html += `<div class="rv-cert-meta">${this._esc(c.issuer)}</div>`;
                 html += '</div>';
@@ -297,7 +332,7 @@
                 html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(a.name)}</span>`;
                 if (a.issuer) html += ` | ${this._esc(a.issuer)}`;
                 html += '</span>';
-                if (a.date) html += `<span class="rv-entry-date">${this._esc(a.date)}</span>`;
+                if (a.date) { const fmtA = (this.typo && this.typo.date_format) || 'MMM YYYY'; html += `<span class="rv-entry-date">${this._esc(this._formatDate(a.date, fmtA))}</span>`; }
                 html += '</div>';
                 if (a.description) html += `<div style="font-size:${this.typo.font_size_body}pt;margin-top:2pt">${this._esc(a.description)}</div>`;
                 html += '</div>';
@@ -405,6 +440,7 @@
             margin_left: 0.6,
             margin_right: 0.6,
             bullet_indent: 12,
+            date_format: 'MMM YYYY',
         };
     }
 
@@ -1819,6 +1855,15 @@
         });
     }
 
+    var typoDateFormatEl = document.getElementById('typoDateFormat');
+    if (typoDateFormatEl) {
+        typoDateFormatEl.value = state.typo.date_format || 'MMM YYYY';
+        typoDateFormatEl.addEventListener('change', function () {
+            state.typo.date_format = typoDateFormatEl.value;
+            notifyChange();
+        });
+    }
+
     var typoSizeNameSlider = document.getElementById('typoSizeName');
     var typoSizeNameNum = document.getElementById('typoSizeNameNum');
     if (typoSizeNameSlider && typoSizeNameNum) {
@@ -1969,6 +2014,9 @@
 
         var fontFamilyEl = document.getElementById('typoFontFamily');
         if (fontFamilyEl) fontFamilyEl.value = typo.font_family;
+
+        var dateFormatEl = document.getElementById('typoDateFormat');
+        if (dateFormatEl && typo.date_format) dateFormatEl.value = typo.date_format;
 
         var sizeNameSlider = document.getElementById('typoSizeName');
         var sizeNameNum = document.getElementById('typoSizeNameNum');
