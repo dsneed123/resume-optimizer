@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from typing import Optional
 
 _STANDARD_SECTIONS = {'experience', 'education', 'skills'}
@@ -67,6 +68,27 @@ _MONTH_YEAR_RE = re.compile(
 )
 
 _NUMERIC_DATE_RE = re.compile(r'\b\d{1,2}/\d{4}\b|\b\d{4}-\d{2}\b')
+
+_MONTH_MAP = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+}
+
+
+def _parse_month_year(date_str: str) -> Optional[tuple[int, int]]:
+    """Parse a 'Month Year' string into (year, month). Returns None if unparseable."""
+    m = _MONTH_YEAR_RE.search(date_str)
+    if not m:
+        return None
+    parts = m.group(0).lower().replace('.', '').split()
+    month = _MONTH_MAP.get(parts[0][:3])
+    if not month:
+        return None
+    try:
+        year = int(parts[1])
+    except (IndexError, ValueError):
+        return None
+    return year, month
 
 _EMAIL_RE = re.compile(r'[\w.+-]+@[\w-]+\.[a-z]{2,}', re.IGNORECASE)
 _PHONE_RE = re.compile(r'(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}')
@@ -232,6 +254,79 @@ def _check_experience_bullets(resume_data: dict) -> tuple[bool, list[str]]:
     return len(issues) == 0, issues
 
 
+def _check_date_consistency(resume_data: dict) -> tuple[bool, list[str]]:
+    """Flag overlapping dates, gaps > 6 months, and future dates (except Expected graduation)."""
+    issues = []
+    today = date.today()
+    today_ym = (today.year, today.month)
+
+    parsed_experiences: list[tuple[tuple[int, int], Optional[tuple[int, int]], str, bool]] = []
+    for exp in resume_data.get("experience", []):
+        if not isinstance(exp, dict):
+            continue
+        company = exp.get("company") or "a position"
+        start_str = (exp.get("start_date") or "").strip()
+        end_str = (exp.get("end_date") or "").strip()
+
+        start_ym = _parse_month_year(start_str) if start_str else None
+        is_current = end_str.lower() in ("present", "current", "")
+        end_ym: Optional[tuple[int, int]] = today_ym if is_current else (
+            _parse_month_year(end_str) if end_str else None
+        )
+
+        if start_ym and start_ym > today_ym:
+            issues.append(f"Start date '{start_str}' at '{company}' is in the future.")
+
+        if not is_current and end_ym and end_ym > today_ym:
+            issues.append(f"End date '{end_str}' at '{company}' is in the future.")
+
+        if start_ym and end_ym and end_ym < start_ym:
+            issues.append(
+                f"End date '{end_str}' is before start date '{start_str}' at '{company}'."
+            )
+            continue
+
+        if start_ym:
+            parsed_experiences.append((start_ym, end_ym, company, is_current))
+
+    parsed_experiences.sort(key=lambda x: x[0])
+
+    for i in range(len(parsed_experiences) - 1):
+        start_a, end_a, company_a, _ = parsed_experiences[i]
+        start_b, _end_b, company_b, _ = parsed_experiences[i + 1]
+
+        if end_a is None:
+            continue
+
+        if end_a > start_b:
+            issues.append(
+                f"Overlapping dates between '{company_a}' and '{company_b}'."
+            )
+        else:
+            gap_months = (start_b[0] - end_a[0]) * 12 + (start_b[1] - end_a[1])
+            if gap_months > 6:
+                issues.append(
+                    f"Gap of {gap_months} months between '{company_a}' and '{company_b}'. "
+                    "Consider addressing employment gaps longer than 6 months."
+                )
+
+    for edu in resume_data.get("education", []):
+        if not isinstance(edu, dict):
+            continue
+        grad_str = (edu.get("graduation_date") or "").strip()
+        if not grad_str or "expected" in grad_str.lower():
+            continue
+        grad_ym = _parse_month_year(grad_str)
+        if grad_ym and grad_ym > today_ym:
+            school = edu.get("school") or "a school"
+            issues.append(
+                f"Graduation date '{grad_str}' at '{school}' is in the future. "
+                "Use 'Expected Month Year' if this is an anticipated graduation."
+            )
+
+    return len(issues) == 0, issues
+
+
 def _check_section_headings(resume_data: dict) -> tuple[bool, list[str]]:
     """Flag non-standard section headings; each costs -5 in the caller."""
     section_headings = resume_data.get("section_headings")
@@ -284,6 +379,12 @@ def analyze_ats_score(resume_data: dict) -> dict:
     if not passed:
         all_issues.extend(heading_issues)
         penalty += 5 * len(heading_issues)
+
+    # -3 per date consistency issue
+    passed, date_consistency_issues = _check_date_consistency(resume_data)
+    if not passed:
+        all_issues.extend(date_consistency_issues)
+        penalty += 3 * len(date_consistency_issues)
 
     score = max(0, 100 - penalty)
     return {"score": score, "issues": all_issues}
