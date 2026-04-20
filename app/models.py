@@ -157,6 +157,7 @@ class TypographySettings:
     margin_right: float = 0.6
     bullet_indent: float = 12
     date_format: str = "MMM YYYY"
+    header_layout: str = "centered"
 
 
 def default_typography() -> dict:
@@ -175,6 +176,7 @@ def default_typography() -> dict:
         "margin_right": 0.6,
         "bullet_indent": 12,
         "date_format": "MMM YYYY",
+        "header_layout": "centered",
     }
 
 
