@@ -236,14 +236,14 @@
   <!-- Sections rendered in user-defined order -->
   {% for section in data.section_order %}
 
-  {% if section == 'summary' and data.summary %}
+  {% if section == 'summary' and data.summary and data.show_summary != false %}
   <div class="section">
     <div class="section-title">Summary</div>
     <div class="summary">{{ data.summary }}</div>
   </div>
   {% endif %}
 
-  {% if section == 'experience' and data.experience %}
+  {% if section == 'experience' and data.experience and data.show_experience != false %}
   <div class="section">
     <div class="section-title">Experience</div>
     {% for exp in data.experience %}
@@ -274,7 +274,7 @@
   </div>
   {% endif %}
 
-  {% if section == 'education' and data.education %}
+  {% if section == 'education' and data.education and data.show_education != false %}
   <div class="section">
     <div class="section-title">Education</div>
     {% for edu in data.education %}
@@ -301,7 +301,7 @@
   </div>
   {% endif %}
 
-  {% if section == 'skills' and data.skills %}
+  {% if section == 'skills' and data.skills and data.show_skills != false %}
   <div class="section">
     <div class="section-title">Skills</div>
     <div class="skills-grid">
@@ -329,7 +329,7 @@
   </div>
   {% endif %}
 
-  {% if section == 'projects' and data.projects %}
+  {% if section == 'projects' and data.projects and data.show_projects != false %}
   <div class="section">
     <div class="section-title">Projects</div>
     {% for proj in data.projects %}
@@ -349,7 +349,7 @@
   </div>
   {% endif %}
 
-  {% if section == 'certifications' and data.certifications %}
+  {% if section == 'certifications' and data.certifications and data.show_certifications != false %}
   <div class="section">
     <div class="section-title">Certifications</div>
     {% for cert in data.certifications %}
@@ -366,7 +366,7 @@
   </div>
   {% endif %}
 
-  {% if section == 'awards' and data.awards %}
+  {% if section == 'awards' and data.awards and data.show_awards != false %}
   <div class="section">
     <div class="section-title">Awards</div>
     {% for award in data.awards %}
