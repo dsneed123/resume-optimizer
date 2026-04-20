@@ -296,7 +296,7 @@
 
             // Awards
             const awards = (d.awards || []).filter(a => a.name);
-            if (awards.length) {
+            if (awards.length && d.show_awards !== false) {
                 html += '<div class="rv-section">';
                 html += '<div class="rv-section-title">Awards</div>';
                 for (const a of awards) {
@@ -336,6 +336,7 @@
             projects: [],
             show_projects: true,
             awards: [],
+            show_awards: true,
         };
     }
 
@@ -1300,4 +1301,167 @@
     }
 
     renderProjectList();
+
+    // ── Awards section ────────────────────────
+    var awardOpenStates = [];
+
+    function newAwardEntry() {
+        return { name: '', issuer: '', date: '', description: '' };
+    }
+
+    function buildAwardItem(entry, index) {
+        var item = document.createElement('div');
+        item.className = 'award-item' + (awardOpenStates[index] === false ? ' collapsed' : '');
+        item.dataset.index = String(index);
+        item.draggable = true;
+
+        var label = entry.name || 'New Award';
+        var chevron = awardOpenStates[index] === false ? '▸' : '▾';
+
+        item.innerHTML =
+            '<div class="award-item-header">' +
+                '<span class="drag-handle" title="Drag to reorder">⠿</span>' +
+                '<span class="award-item-label">' + escHtml(label) + '</span>' +
+                '<div class="award-item-actions">' +
+                    '<button class="award-toggle-btn" title="Expand/collapse">' + chevron + '</button>' +
+                    '<button class="award-delete-btn" title="Delete entry">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="award-item-body">' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Award Name</label>' +
+                    '<input class="field-input award-field" data-field="name" type="text" value="' + escHtml(entry.name) + '" placeholder="Employee of the Year">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Issuing Organization</label>' +
+                    '<input class="field-input award-field" data-field="issuer" type="text" value="' + escHtml(entry.issuer) + '" placeholder="Acme Corp">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Date</label>' +
+                    '<input class="field-input award-field" data-field="date" type="text" value="' + escHtml(entry.date) + '" placeholder="June 2023">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Description (optional)</label>' +
+                    '<input class="field-input award-field" data-field="description" type="text" value="' + escHtml(entry.description) + '" placeholder="Brief description of the award">' +
+                '</div>' +
+            '</div>';
+
+        var header = item.querySelector('.award-item-header');
+        var toggleBtn = item.querySelector('.award-toggle-btn');
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.award-delete-btn') || e.target.closest('.drag-handle')) return;
+            var nowCollapsed = item.classList.toggle('collapsed');
+            awardOpenStates[index] = !nowCollapsed;
+            toggleBtn.textContent = nowCollapsed ? '▸' : '▾';
+        });
+
+        item.querySelector('.award-delete-btn').addEventListener('click', function () {
+            if (confirm('Delete this award?')) {
+                state.data.awards.splice(index, 1);
+                awardOpenStates.splice(index, 1);
+                renderAwardList();
+                notifyChange();
+            }
+        });
+
+        item.querySelectorAll('.award-field').forEach(function (input) {
+            input.addEventListener('input', function () {
+                state.data.awards[index][input.dataset.field] = input.value;
+                if (input.dataset.field === 'name') {
+                    item.querySelector('.award-item-label').textContent = input.value || 'New Award';
+                }
+                notifyChange();
+            });
+        });
+
+        return item;
+    }
+
+    function bindAwardDragDrop() {
+        var listEl = document.getElementById('awardsList');
+        if (!listEl) return;
+        var items = listEl.querySelectorAll('.award-item');
+        var dragSrcIndex = null;
+
+        items.forEach(function (item) {
+            item.addEventListener('dragstart', function (e) {
+                dragSrcIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', function () {
+                item.classList.remove('dragging');
+                items.forEach(function (i) { i.classList.remove('drag-over'); });
+                dragSrcIndex = null;
+            });
+
+            item.addEventListener('dragover', function (e) {
+                if (dragSrcIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', function () {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dropIndex = parseInt(item.dataset.index);
+                if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    var aw = state.data.awards;
+                    var moved = aw.splice(dragSrcIndex, 1)[0];
+                    aw.splice(dropIndex, 0, moved);
+                    var openMoved = awardOpenStates.splice(dragSrcIndex, 1)[0];
+                    awardOpenStates.splice(dropIndex, 0, openMoved);
+                    renderAwardList();
+                    notifyChange();
+                }
+                dragSrcIndex = null;
+            });
+        });
+    }
+
+    function renderAwardList() {
+        var listEl = document.getElementById('awardsList');
+        if (!listEl) return;
+
+        if (!state.data.awards.length) {
+            listEl.innerHTML = '<p class="empty-state">No awards added yet.</p>';
+            return;
+        }
+
+        while (awardOpenStates.length < state.data.awards.length) awardOpenStates.push(true);
+        awardOpenStates.length = state.data.awards.length;
+
+        listEl.innerHTML = '';
+        state.data.awards.forEach(function (entry, index) {
+            listEl.appendChild(buildAwardItem(entry, index));
+        });
+
+        bindAwardDragDrop();
+    }
+
+    var awardsVisibleEl = document.getElementById('awardsVisible');
+    if (awardsVisibleEl) {
+        awardsVisibleEl.addEventListener('change', function () {
+            state.data.show_awards = awardsVisibleEl.checked;
+            notifyChange();
+        });
+    }
+
+    var addAwardBtn = document.getElementById('addAward');
+    if (addAwardBtn) {
+        addAwardBtn.addEventListener('click', function () {
+            state.data.awards.push(newAwardEntry());
+            awardOpenStates.push(true);
+            renderAwardList();
+            notifyChange();
+        });
+    }
+
+    renderAwardList();
 })();
