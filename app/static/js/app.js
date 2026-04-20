@@ -446,19 +446,20 @@
             if (!d.summary || d.show_summary === false) return '';
             return '<div class="rv-section">' +
                 '<div class="rv-section-title">Summary</div>' +
-                `<div class="rv-summary">${this._esc(d.summary)}</div>` +
+                `<div class="rv-summary rv-editable" data-edit="summary">${this._esc(d.summary)}</div>` +
                 '</div>';
         }
 
         _renderExperienceHtml(d) {
             if (d.show_experience === false) return '';
-            const exp = (d.experience || []).filter(e => e.company || e.title);
-            if (!exp.length) return '';
+            const allExp = d.experience || [];
+            if (!allExp.some(e => e.company || e.title)) return '';
             let html = '<div class="rv-section"><div class="rv-section-title">Experience</div>';
-            for (const e of exp) {
+            allExp.forEach((e, realIdx) => {
+                if (!e.company && !e.title) return;
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(e.title)}</span>`;
-                if (e.company) html += ` | ${this._esc(e.company)}`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title rv-editable" data-edit="experience.${realIdx}.title">${this._esc(e.title)}</span>`;
+                if (e.company) html += ` | <span class="rv-editable" data-edit="experience.${realIdx}.company">${this._esc(e.company)}</span>`;
                 if (e.location) html += ` \u00b7 ${this._esc(e.location)}`;
                 html += '</span>';
                 const fmt = (this.typo && this.typo.date_format) || 'MMM YYYY';
@@ -467,22 +468,25 @@
                 html += '</div>';
                 if (e.bullets && e.bullets.length) {
                     html += '<ul class="rv-bullets">';
-                    for (const b of e.bullets) html += `<li>${this._renderInlineMd(b)}</li>`;
+                    e.bullets.forEach((b, bi) => {
+                        html += `<li class="rv-editable" data-edit="experience.${realIdx}.bullet.${bi}">${this._renderInlineMd(b)}</li>`;
+                    });
                     html += '</ul>';
                 }
                 html += '</div>';
-            }
+            });
             return html + '</div>';
         }
 
         _renderEducationHtml(d) {
             if (d.show_education === false) return '';
-            const edu = (d.education || []).filter(e => e.school);
-            if (!edu.length) return '';
+            const allEdu = d.education || [];
+            if (!allEdu.some(e => e.school)) return '';
             let html = '<div class="rv-section"><div class="rv-section-title">Education</div>';
-            for (const e of edu) {
+            allEdu.forEach((e, realIdx) => {
+                if (!e.school) return;
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(e.school)}</span>`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title rv-editable" data-edit="education.${realIdx}.school">${this._esc(e.school)}</span>`;
                 if (e.degree) html += ` \u00b7 ${this._esc(e.degree)}`;
                 if (e.field) html += `, ${this._esc(e.field)}`;
                 html += '</span>';
@@ -496,7 +500,7 @@
                     html += `<div class="rv-entry-sub">${sub}</div>`;
                 }
                 html += '</div>';
-            }
+            });
             return html + '</div>';
         }
 
@@ -535,34 +539,36 @@
         }
 
         _renderProjectsHtml(d) {
-            const projects = (d.projects || []).filter(p => p.name);
-            if (!projects.length || d.show_projects === false) return '';
+            const allProj = d.projects || [];
+            if (!allProj.some(p => p.name) || d.show_projects === false) return '';
             let html = '<div class="rv-section"><div class="rv-section-title">Projects</div>';
-            for (const p of projects) {
+            allProj.forEach((p, realIdx) => {
+                if (!p.name) return;
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(p.name)}</span>`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title rv-editable" data-edit="projects.${realIdx}.name">${this._esc(p.name)}</span>`;
                 if (p.technologies) html += ` \u00b7 ${this._esc(p.technologies)}`;
                 html += '</span>';
                 if (p.url) html += `<span class="rv-entry-date">${this._esc(p.url)}</span>`;
                 html += '</div>';
                 if (p.description) html += `<div style="font-size:${this.typo.font_size_body}pt;margin-top:2pt">${this._esc(p.description)}</div>`;
                 html += '</div>';
-            }
+            });
             return html + '</div>';
         }
 
         _renderCertificationsHtml(d) {
-            const certs = (d.certifications || []).filter(c => c.name);
-            if (!certs.length || d.show_certifications === false) return '';
+            const allCerts = d.certifications || [];
+            if (!allCerts.some(c => c.name) || d.show_certifications === false) return '';
             let html = '<div class="rv-section"><div class="rv-section-title">Certifications</div>';
-            for (const c of certs) {
+            allCerts.forEach((c, realIdx) => {
+                if (!c.name) return;
                 html += '<div class="rv-cert"><div class="rv-entry-header">';
-                html += `<span class="rv-cert-name">${this._esc(c.name)}</span>`;
+                html += `<span class="rv-cert-name rv-editable" data-edit="certifications.${realIdx}.name">${this._esc(c.name)}</span>`;
                 if (c.date) { const fmtC = (this.typo && this.typo.date_format) || 'MMM YYYY'; html += `<span class="rv-entry-date">${this._esc(this._formatDate(c.date, fmtC))}</span>`; }
                 html += '</div>';
                 if (c.issuer) html += `<div class="rv-cert-meta">${this._esc(c.issuer)}</div>`;
                 html += '</div>';
-            }
+            });
             return html + '</div>';
         }
 
@@ -582,19 +588,20 @@
         }
 
         _renderAwardsHtml(d) {
-            const awards = (d.awards || []).filter(a => a.name);
-            if (!awards.length || d.show_awards === false) return '';
+            const allAwards = d.awards || [];
+            if (!allAwards.some(a => a.name) || d.show_awards === false) return '';
             let html = '<div class="rv-section"><div class="rv-section-title">Awards</div>';
-            for (const a of awards) {
+            allAwards.forEach((a, realIdx) => {
+                if (!a.name) return;
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(a.name)}</span>`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title rv-editable" data-edit="awards.${realIdx}.name">${this._esc(a.name)}</span>`;
                 if (a.issuer) html += ` | ${this._esc(a.issuer)}`;
                 html += '</span>';
                 if (a.date) { const fmtA = (this.typo && this.typo.date_format) || 'MMM YYYY'; html += `<span class="rv-entry-date">${this._esc(this._formatDate(a.date, fmtA))}</span>`; }
                 html += '</div>';
                 if (a.description) html += `<div style="font-size:${this.typo.font_size_body}pt;margin-top:2pt">${this._esc(a.description)}</div>`;
                 html += '</div>';
-            }
+            });
             return html + '</div>';
         }
 
@@ -608,13 +615,13 @@
             // Header always first
             const h = d.header || {};
             let html = '<div class="rv-header">';
-            html += `<div class="rv-name">${this._esc(h.name)}</div>`;
+            html += `<div class="rv-name rv-editable" data-edit="header.name">${this._esc(h.name)}</div>`;
             html += '<div class="rv-contact">';
-            if (h.email) html += `<span>${this._esc(h.email)}</span>`;
-            if (h.phone) html += `<span>${this._esc(h.phone)}</span>`;
-            if (h.location) html += `<span>${this._esc(h.location)}</span>`;
-            if (h.linkedin) html += `<span>${this._esc(h.linkedin)}</span>`;
-            if (h.website) html += `<span>${this._esc(h.website)}</span>`;
+            if (h.email) html += `<span class="rv-editable" data-edit="header.email">${this._esc(h.email)}</span>`;
+            if (h.phone) html += `<span class="rv-editable" data-edit="header.phone">${this._esc(h.phone)}</span>`;
+            if (h.location) html += `<span class="rv-editable" data-edit="header.location">${this._esc(h.location)}</span>`;
+            if (h.linkedin) html += `<span class="rv-editable" data-edit="header.linkedin">${this._esc(h.linkedin)}</span>`;
+            if (h.website) html += `<span class="rv-editable" data-edit="header.website">${this._esc(h.website)}</span>`;
             html += '</div></div>';
             html += '<hr class="rv-header-rule">';
 
@@ -859,6 +866,87 @@
     const state = { data: defaultData(), typo: defaultTypo() };
     const preview = new ResumePreview(pageEl, previewEl);
     preview.update(state.data, state.typo);
+
+    // ── Click-to-edit: preview → sidebar ────────────
+    function scrollSidebarToEl(el) {
+        var sidebar = document.getElementById('sidebar');
+        if (!sidebar || !el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function focusSidebarField(path) {
+        var parts = path.split('.');
+        var section = parts[0];
+
+        var navKey = section;
+        var nav = document.getElementById('sidebarNav');
+        if (nav) {
+            var navBtn = nav.querySelector('.sidebar-nav-btn[data-section="' + navKey + '"]');
+            if (navBtn) navBtn.click();
+        }
+
+        setTimeout(function () {
+            if (section === 'header') {
+                var fieldEl = document.getElementById(parts[1]);
+                if (fieldEl) { fieldEl.focus(); fieldEl.select(); scrollSidebarToEl(fieldEl); }
+
+            } else if (section === 'summary') {
+                var summEl = document.getElementById('summary');
+                if (summEl) { summEl.focus(); scrollSidebarToEl(summEl); }
+
+            } else {
+                var idx = parseInt(parts[1], 10);
+                var fieldName = parts[2];
+                var itemSelMap = {
+                    experience:     '.exp-item',
+                    education:      '.edu-item',
+                    skills:         '.skill-item',
+                    certifications: '.cert-item',
+                    projects:       '.proj-item',
+                    awards:         '.award-item',
+                };
+                var itemSel = itemSelMap[section];
+                if (!itemSel) return;
+
+                var itemEl = document.querySelector(itemSel + '[data-index="' + idx + '"]');
+                if (!itemEl) return;
+
+                if (itemEl.classList.contains('collapsed')) {
+                    var hdrEl = itemEl.querySelector(
+                        '.exp-item-header, .edu-item-header, .skill-item-header, ' +
+                        '.cert-item-header, .proj-item-header, .award-item-header'
+                    );
+                    if (hdrEl) hdrEl.click();
+                }
+
+                setTimeout(function () {
+                    var input;
+                    if (fieldName === 'bullet' && parts[3] !== undefined) {
+                        var bi = parseInt(parts[3], 10);
+                        input = itemEl.querySelector('.bullet-input[data-bi="' + bi + '"]');
+                    } else if (section === 'skills' && fieldName === 'category') {
+                        input = itemEl.querySelector('.skill-cat-field');
+                    } else {
+                        input = itemEl.querySelector('[data-field="' + fieldName + '"]');
+                    }
+                    if (input) {
+                        input.focus();
+                        if (input.tagName === 'INPUT') input.select();
+                        scrollSidebarToEl(input);
+                    }
+                }, 80);
+            }
+        }, 0);
+    }
+
+    pageEl.addEventListener('click', function (e) {
+        var target = e.target.closest('[data-edit]');
+        if (!target) return;
+        var editPath = target.dataset.edit;
+        focusSidebarField(editPath);
+        target.classList.add('rv-edit-flash');
+        setTimeout(function () { target.classList.remove('rv-edit-flash'); }, 600);
+    });
 
     // ── Auto-save ────────────────────────────────
     var resumeId = null;
