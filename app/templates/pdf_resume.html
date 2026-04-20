@@ -5,7 +5,7 @@
 <style>
   @page {
     size: letter;
-    margin: {{ t.margin_top }}in {{ t.margin_right }}in {{ t.margin_bottom }}in {{ t.margin_left }}in;
+    margin: {{ typography.margin_top }}in {{ typography.margin_right }}in {{ typography.margin_bottom }}in {{ typography.margin_left }}in;
   }
 
   * {
@@ -15,9 +15,9 @@
   }
 
   body {
-    font-family: {{ t.font_family }}, Arial, sans-serif;
-    font-size: {{ t.font_size_body }}pt;
-    line-height: {{ t.line_height }};
+    font-family: {{ typography.font_family }}, Arial, sans-serif;
+    font-size: {{ typography.font_size_body }}pt;
+    line-height: {{ typography.line_height }};
     color: #000;
     overflow: hidden;
   }
@@ -29,14 +29,14 @@
   }
 
   .header .name {
-    font-size: {{ t.font_size_name }}pt;
+    font-size: {{ typography.font_size_name }}pt;
     font-weight: bold;
     line-height: 1;
     margin-bottom: 3pt;
   }
 
   .header .contact {
-    font-size: {{ t.font_size_detail }}pt;
+    font-size: {{ typography.font_size_detail }}pt;
     color: #333;
   }
 
@@ -49,16 +49,16 @@
     border: none;
     border-top: 1pt solid #000;
     margin-top: 5pt;
-    margin-bottom: {{ t.section_spacing }}pt;
+    margin-bottom: {{ typography.section_spacing }}pt;
   }
 
   /* ── Section ── */
   .section {
-    margin-bottom: {{ t.section_spacing }}pt;
+    margin-bottom: {{ typography.section_spacing }}pt;
   }
 
   .section-title {
-    font-size: {{ t.font_size_section_header }}pt;
+    font-size: {{ typography.font_size_section_header }}pt;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.5pt;
@@ -69,7 +69,7 @@
 
   /* ── Entry (experience / education / project / award) ── */
   .entry {
-    margin-bottom: {{ t.paragraph_spacing }}pt;
+    margin-bottom: {{ typography.paragraph_spacing }}pt;
   }
 
   .entry-header {
@@ -79,7 +79,7 @@
   }
 
   .entry-left {
-    font-size: {{ t.font_size_body }}pt;
+    font-size: {{ typography.font_size_body }}pt;
   }
 
   .entry-title {
@@ -87,14 +87,14 @@
   }
 
   .entry-date {
-    font-size: {{ t.font_size_detail }}pt;
+    font-size: {{ typography.font_size_detail }}pt;
     color: #444;
     white-space: nowrap;
     margin-left: 6pt;
   }
 
   .entry-subtitle {
-    font-size: {{ t.font_size_detail }}pt;
+    font-size: {{ typography.font_size_detail }}pt;
     color: #444;
     margin-bottom: 2pt;
   }
@@ -102,26 +102,26 @@
   /* ── Bullets ── */
   ul.bullets {
     list-style: disc;
-    padding-left: {{ t.bullet_indent }}pt;
+    padding-left: {{ typography.bullet_indent }}pt;
     margin-top: 2pt;
   }
 
   ul.bullets li {
-    font-size: {{ t.font_size_body }}pt;
-    line-height: {{ t.line_height }};
+    font-size: {{ typography.font_size_body }}pt;
+    line-height: {{ typography.line_height }};
     margin-bottom: 1pt;
   }
 
   /* ── Summary ── */
   .summary {
-    font-size: {{ t.font_size_body }}pt;
-    line-height: {{ t.line_height }};
+    font-size: {{ typography.font_size_body }}pt;
+    line-height: {{ typography.line_height }};
   }
 
   /* ── Skills ── */
   .skills-grid {
-    font-size: {{ t.font_size_body }}pt;
-    line-height: {{ t.line_height }};
+    font-size: {{ typography.font_size_body }}pt;
+    line-height: {{ typography.line_height }};
   }
 
   .skill-row {
@@ -134,16 +134,16 @@
 
   /* ── Certifications / Awards ── */
   .cert-entry {
-    margin-bottom: {{ t.paragraph_spacing }}pt;
+    margin-bottom: {{ typography.paragraph_spacing }}pt;
   }
 
   .cert-name {
     font-weight: bold;
-    font-size: {{ t.font_size_body }}pt;
+    font-size: {{ typography.font_size_body }}pt;
   }
 
   .cert-meta {
-    font-size: {{ t.font_size_detail }}pt;
+    font-size: {{ typography.font_size_detail }}pt;
     color: #444;
   }
 </style>
@@ -259,7 +259,7 @@
         {% if proj.url %}<span class="entry-date">{{ proj.url }}</span>{% endif %}
       </div>
       {% if proj.description %}
-      <div style="font-size: {{ t.font_size_body }}pt; margin-top: 2pt;">{{ proj.description }}</div>
+      <div style="font-size: {{ typography.font_size_body }}pt; margin-top: 2pt;">{{ proj.description }}</div>
       {% endif %}
     </div>
     {% endif %}
@@ -296,7 +296,7 @@
         {% if award.date %}<span class="entry-date">{{ award.date }}</span>{% endif %}
       </div>
       {% if award.description %}
-      <div style="font-size: {{ t.font_size_body }}pt; margin-top: 2pt;">{{ award.description }}</div>
+      <div style="font-size: {{ typography.font_size_body }}pt; margin-top: 2pt;">{{ award.description }}</div>
       {% endif %}
     </div>
     {% endif %}
