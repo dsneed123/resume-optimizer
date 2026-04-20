@@ -855,6 +855,7 @@
         })
         .catch(function () {
             setSaveStatus('error');
+            showToast('Changes could not be saved. Please try again.', 'error');
         });
     }
 
@@ -2674,8 +2675,7 @@
 
     // ── Auto-fit button ──────────────────────────
     var autoFitBtn = document.getElementById('autoFitBtn');
-    var autoFitToastEl = document.getElementById('autoFitToast');
-    var autoFitToastTimer = null;
+    var toastContainerEl = document.getElementById('toastContainer');
 
     function updateAutoFitBtnState(fits) {
         if (autoFitBtn) {
@@ -2702,14 +2702,47 @@
         }
     }
 
+    function showToast(message, type) {
+        if (!toastContainerEl) return;
+        var autoDismiss = type === 'error' ? 0 : (type === 'success' ? 3000 : 4000);
+
+        var toast = document.createElement('div');
+        toast.className = 'toast toast--' + (type || 'info');
+
+        var msg = document.createElement('span');
+        msg.className = 'toast__message';
+        msg.textContent = message;
+        toast.appendChild(msg);
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'toast__close';
+        closeBtn.setAttribute('aria-label', 'Dismiss');
+        closeBtn.textContent = '\u00d7';
+        toast.appendChild(closeBtn);
+
+        function dismiss() {
+            toast.classList.add('toast--hiding');
+            toast.addEventListener('transitionend', function () {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, { once: true });
+        }
+
+        closeBtn.addEventListener('click', dismiss);
+
+        toastContainerEl.appendChild(toast);
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                toast.classList.add('toast--visible');
+            });
+        });
+
+        if (autoDismiss > 0) {
+            setTimeout(dismiss, autoDismiss);
+        }
+    }
+
     function showAutoFitToast(message) {
-        if (!autoFitToastEl) return;
-        autoFitToastEl.textContent = message;
-        autoFitToastEl.classList.add('toast--visible');
-        clearTimeout(autoFitToastTimer);
-        autoFitToastTimer = setTimeout(function () {
-            autoFitToastEl.classList.remove('toast--visible');
-        }, 4000);
+        showToast(message, 'info');
     }
 
     function applyTypoToControls(typo) {
@@ -2916,7 +2949,7 @@
             loadImportedData(data);
             resumeId = id;
             lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
-            showAutoFitToast('Resume imported successfully.');
+            showToast('Resume imported successfully.', 'success');
         });
     }
 
@@ -3355,9 +3388,10 @@
         .then(function (blob) {
             var typedBlob = new Blob([blob], { type: mimeType });
             triggerDownload(typedBlob, getExportFilename(format));
+            showToast(format.toUpperCase() + ' export complete.', 'success');
         })
         .catch(function (err) {
-            showAutoFitToast((err && err.message) || 'Export failed. Please try again.');
+            showToast((err && err.message) || 'Export failed. Please try again.', 'error');
         })
         .finally(function () {
             if (btn) btn.disabled = false;
@@ -3417,11 +3451,11 @@
                 } else {
                     msg = 'Adjusted to fit one page: ' + result.changes.join(', ');
                 }
-                showAutoFitToast(msg);
+                showToast(msg, 'info');
             })
             .catch(function () {
                 autoFitBtn.disabled = false;
-                showAutoFitToast('Auto-fit failed. Please try again.');
+                showToast('Auto-fit failed. Please try again.', 'error');
             });
         });
     }
