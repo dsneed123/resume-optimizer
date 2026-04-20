@@ -9,17 +9,150 @@
 <body>
     <div id="app">
         <header class="toolbar">
-            <h1>Resume Optimizer</h1>
+            <div class="toolbar-left">
+                <button class="toolbar-btn sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <rect y="3" width="18" height="2" rx="1" fill="currentColor"/>
+                        <rect y="8" width="18" height="2" rx="1" fill="currentColor"/>
+                        <rect y="13" width="18" height="2" rx="1" fill="currentColor"/>
+                    </svg>
+                </button>
+                <h1 class="toolbar-title">Resume Optimizer</h1>
+            </div>
+            <div class="toolbar-center">
+                <span class="save-status" id="saveStatus"></span>
+            </div>
+            <div class="toolbar-right">
+                <button class="toolbar-btn" id="importBtn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 1v9M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Import
+                </button>
+                <button class="toolbar-btn toolbar-btn--primary" id="exportBtn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 11V2M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Export PDF
+                </button>
+            </div>
         </header>
+
         <main class="workspace">
-            <aside class="sidebar">
-                <p>Controls will go here.</p>
+            <aside class="sidebar" id="sidebar">
+                <nav class="sidebar-nav">
+                    <button class="sidebar-nav-btn active" data-section="header">Contact</button>
+                    <button class="sidebar-nav-btn" data-section="summary">Summary</button>
+                    <button class="sidebar-nav-btn" data-section="experience">Experience</button>
+                    <button class="sidebar-nav-btn" data-section="education">Education</button>
+                    <button class="sidebar-nav-btn" data-section="skills">Skills</button>
+                    <button class="sidebar-nav-btn" data-section="projects">Projects</button>
+                    <button class="sidebar-nav-btn" data-section="certifications">Certs</button>
+                </nav>
+
+                <div class="sidebar-section active" id="section-header">
+                    <div class="section-header">
+                        <h2 class="section-title">Contact Info</h2>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="name">Full Name</label>
+                        <input class="field-input" type="text" id="name" placeholder="Jane Smith">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="email">Email</label>
+                        <input class="field-input" type="email" id="email" placeholder="jane@example.com">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="phone">Phone</label>
+                        <input class="field-input" type="tel" id="phone" placeholder="(555) 000-0000">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="location">Location</label>
+                        <input class="field-input" type="text" id="location" placeholder="City, State">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="linkedin">LinkedIn</label>
+                        <input class="field-input" type="url" id="linkedin" placeholder="linkedin.com/in/janesmith">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="website">Website</label>
+                        <input class="field-input" type="url" id="website" placeholder="janesmith.dev">
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="section-summary">
+                    <div class="section-header">
+                        <h2 class="section-title">Professional Summary</h2>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="summary">Summary</label>
+                        <textarea class="field-input field-textarea" id="summary" rows="5" placeholder="Brief professional summary..."></textarea>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="section-experience">
+                    <div class="section-header">
+                        <h2 class="section-title">Experience</h2>
+                        <button class="add-btn" id="addExperience">+ Add</button>
+                    </div>
+                    <div id="experienceList" class="item-list">
+                        <p class="empty-state">No experience added yet.</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="section-education">
+                    <div class="section-header">
+                        <h2 class="section-title">Education</h2>
+                        <button class="add-btn" id="addEducation">+ Add</button>
+                    </div>
+                    <div id="educationList" class="item-list">
+                        <p class="empty-state">No education added yet.</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="section-skills">
+                    <div class="section-header">
+                        <h2 class="section-title">Skills</h2>
+                        <button class="add-btn" id="addSkill">+ Add Category</button>
+                    </div>
+                    <div id="skillsList" class="item-list">
+                        <p class="empty-state">No skills added yet.</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="section-projects">
+                    <div class="section-header">
+                        <h2 class="section-title">Projects</h2>
+                        <button class="add-btn" id="addProject">+ Add</button>
+                    </div>
+                    <div id="projectsList" class="item-list">
+                        <p class="empty-state">No projects added yet.</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="section-certifications">
+                    <div class="section-header">
+                        <h2 class="section-title">Certifications</h2>
+                        <button class="add-btn" id="addCert">+ Add</button>
+                    </div>
+                    <div id="certsList" class="item-list">
+                        <p class="empty-state">No certifications added yet.</p>
+                    </div>
+                </div>
             </aside>
-            <section class="preview">
-                <p>Resume preview will go here.</p>
+
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+            <section class="preview" id="preview">
+                <div class="page" id="resumePage">
+                    <p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>
+                </div>
             </section>
         </main>
     </div>
+
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
