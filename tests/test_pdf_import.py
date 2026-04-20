@@ -18,6 +18,9 @@ from app.services.pdf_import import (
     _parse_projects_block,
     _parse_resume_text,
     _fallback_resume,
+    _is_header_footer_line,
+    _words_to_lines,
+    _detect_two_columns,
 )
 
 pdfplumber_required = pytest.mark.skipif(
@@ -146,6 +149,60 @@ def test_fallback_resume_puts_text_in_summary():
 def test_fallback_resume_empty_text():
     result = _fallback_resume("")
     assert result["summary"] is None
+
+
+def test_is_header_footer_line_page_numbers():
+    assert _is_header_footer_line("1")
+    assert _is_header_footer_line("  2  ")
+    assert _is_header_footer_line("Page 3")
+    assert _is_header_footer_line("page 1 of 4")
+
+
+def test_is_header_footer_line_normal_text():
+    assert not _is_header_footer_line("John Smith")
+    assert not _is_header_footer_line("Senior Software Engineer")
+    assert not _is_header_footer_line("")
+
+
+def test_words_to_lines_sorts_left_to_right():
+    words = [
+        {"text": "World", "top": 10.0, "x0": 50.0, "x1": 90.0},
+        {"text": "Hello", "top": 10.0, "x0": 5.0, "x1": 45.0},
+    ]
+    lines = _words_to_lines(words)
+    assert lines == ["Hello World"]
+
+
+def test_words_to_lines_groups_by_y():
+    words = [
+        {"text": "Line1", "top": 10.0, "x0": 5.0, "x1": 50.0},
+        {"text": "Line2", "top": 25.0, "x0": 5.0, "x1": 50.0},
+    ]
+    lines = _words_to_lines(words)
+    assert len(lines) == 2
+    assert lines[0] == "Line1"
+    assert lines[1] == "Line2"
+
+
+def test_words_to_lines_empty():
+    assert _words_to_lines([]) == []
+
+
+def test_detect_two_columns_sparse_middle():
+    # Words only on left (<35%) and right (>65%) — middle is empty
+    words = [{"text": "a", "x0": 10.0, "x1": 50.0} for _ in range(5)] + \
+            [{"text": "b", "x0": 400.0, "x1": 440.0} for _ in range(5)]
+    assert _detect_two_columns(words, 500.0) is True
+
+
+def test_detect_two_columns_single_column():
+    # Words span the full width including the middle
+    words = [{"text": str(i), "x0": float(i * 10), "x1": float(i * 10 + 8)} for i in range(50)]
+    assert _detect_two_columns(words, 500.0) is False
+
+
+def test_detect_two_columns_empty():
+    assert _detect_two_columns([], 500.0) is False
 
 
 @pdfplumber_required
