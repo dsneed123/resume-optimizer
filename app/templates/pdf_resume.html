@@ -386,6 +386,26 @@
   </div>
   {% endif %}
 
+  {% if section.startswith('custom_') %}
+  {% set cs_id = section[7:] | int %}
+  {% for cs in data.custom_sections %}
+  {% if cs.id == cs_id and cs.show != false and (cs.title or cs.bullets) %}
+  <div class="section">
+    <div class="section-title">{{ cs.title or 'Custom Section' }}</div>
+    {% if cs.bullets %}
+    <ul class="bullets">
+      {% for bullet in cs.bullets %}
+      {% if bullet %}
+      <li>{{ bullet | render_inline_md }}</li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+
   {% endfor %}
 
 </body>

@@ -1853,3 +1853,58 @@ body {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
 }
+
+/* Custom sections */
+.add-custom-section-nav {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 4px 12px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.add-custom-section-nav:hover {
+    background: #f0f4ff;
+    border-color: var(--accent);
+}
+
+.custom-section-title {
+    flex: 1;
+    min-width: 0;
+    margin-right: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.custom-section-footer {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.delete-custom-section-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.delete-custom-section-btn:hover {
+    background: #fff0f0;
+    color: #c0392b;
+    border-color: #e8b4b4;
+}

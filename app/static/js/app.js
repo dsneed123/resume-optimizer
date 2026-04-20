@@ -402,6 +402,21 @@
             return html + '</div>';
         }
 
+        _renderCustomSectionHtml(d, id) {
+            var cs = (d.custom_sections || []).find(function (s) { return s.id === id; });
+            if (!cs || cs.show === false) return '';
+            var bullets = (cs.bullets || []).filter(Boolean);
+            if (!cs.title && !bullets.length) return '';
+            var html = '<div class="rv-section"><div class="rv-section-title">' + this._esc(cs.title || 'Custom Section') + '</div>';
+            if (bullets.length) {
+                html += '<ul class="rv-bullets">';
+                for (var i = 0; i < bullets.length; i++) html += '<li>' + this._renderInlineMd(bullets[i]) + '</li>';
+                html += '</ul>';
+            }
+            html += '</div>';
+            return html;
+        }
+
         _renderAwardsHtml(d) {
             const awards = (d.awards || []).filter(a => a.name);
             if (!awards.length || d.show_awards === false) return '';
@@ -442,14 +457,19 @@
             // Remaining sections in user-defined order
             const order = d.section_order || ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards'];
             for (const section of order) {
-                switch (section) {
-                    case 'summary':        html += this._renderSummaryHtml(d); break;
-                    case 'experience':     html += this._renderExperienceHtml(d); break;
-                    case 'education':      html += this._renderEducationHtml(d); break;
-                    case 'skills':         html += this._renderSkillsHtml(d); break;
-                    case 'projects':       html += this._renderProjectsHtml(d); break;
-                    case 'certifications': html += this._renderCertificationsHtml(d); break;
-                    case 'awards':         html += this._renderAwardsHtml(d); break;
+                if (section.startsWith('custom_')) {
+                    const id = parseInt(section.slice(7));
+                    html += this._renderCustomSectionHtml(d, id);
+                } else {
+                    switch (section) {
+                        case 'summary':        html += this._renderSummaryHtml(d); break;
+                        case 'experience':     html += this._renderExperienceHtml(d); break;
+                        case 'education':      html += this._renderEducationHtml(d); break;
+                        case 'skills':         html += this._renderSkillsHtml(d); break;
+                        case 'projects':       html += this._renderProjectsHtml(d); break;
+                        case 'certifications': html += this._renderCertificationsHtml(d); break;
+                        case 'awards':         html += this._renderAwardsHtml(d); break;
+                    }
                 }
             }
 
@@ -460,7 +480,8 @@
                 (d.skills || []).some(s => s.category || (s.items && s.items.length)) ||
                 (d.projects || []).some(p => p.name) ||
                 (d.certifications || []).some(c => c.name) ||
-                (d.awards || []).some(a => a.name);
+                (d.awards || []).some(a => a.name) ||
+                (d.custom_sections || []).some(cs => cs.title || (cs.bullets && cs.bullets.some(Boolean)));
 
             if (!hasContent) {
                 this.page.innerHTML = '<p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>';
@@ -476,6 +497,19 @@
     // ── Default state ────────────────────────────
     var DEFAULT_SECTION_ORDER = ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards'];
 
+    var customSectionCounter = 0;
+
+    function initCustomSectionCounter() {
+        var maxId = (state.data.custom_sections || []).reduce(function (m, s) {
+            return Math.max(m, s.id || 0);
+        }, 0);
+        if (maxId > customSectionCounter) customSectionCounter = maxId;
+    }
+
+    function nextCustomSectionId() {
+        return ++customSectionCounter;
+    }
+
     var SECTION_META = {
         summary:        { label: 'Summary',     showKey: 'show_summary' },
         experience:     { label: 'Experience',  showKey: 'show_experience' },
@@ -485,6 +519,21 @@
         certifications: { label: 'Certs',       showKey: 'show_certifications' },
         awards:         { label: 'Awards',      showKey: 'show_awards' },
     };
+
+    function getSectionMeta(key) {
+        if (SECTION_META[key]) return SECTION_META[key];
+        if (key.startsWith('custom_')) {
+            var id = parseInt(key.slice(7));
+            var cs = (state.data.custom_sections || []).find(function (s) { return s.id === id; });
+            return {
+                label: cs ? (cs.title || 'Custom Section') : 'Custom Section',
+                showKey: null,
+                isCustom: true,
+                customId: id
+            };
+        }
+        return null;
+    }
 
     var EYE_OPEN_SVG = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1 6.5C1 6.5 3 2.5 6.5 2.5S12 6.5 12 6.5 10 10.5 6.5 10.5 1 6.5 1 6.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="6.5" cy="6.5" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>';
     var EYE_CLOSED_SVG = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1.5 1.5l10 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M5.5 3C6 2.7 6.3 2.5 6.5 2.5c3.5 0 5.5 4 5.5 4s-.7 1.3-1.9 2.4M3 4.5C1.7 5.6 1 6.5 1 6.5s2 4 5.5 4c1 0 1.9-.3 2.7-.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -506,6 +555,7 @@
             show_projects: true,
             awards: [],
             show_awards: true,
+            custom_sections: [],
             section_order: DEFAULT_SECTION_ORDER.slice(),
         };
     }
@@ -655,6 +705,7 @@
         var awardsVisEl = document.getElementById('awardsVisible');
         if (awardsVisEl) awardsVisEl.checked = state.data.show_awards !== false;
 
+        renderAllCustomSectionPanels();
         applyTypoToControls(state.typo);
         renderSidebarNav();
         renderExperienceList();
@@ -690,6 +741,13 @@
     function updateSectionPanelVisibility() {
         var order = state.data.section_order || DEFAULT_SECTION_ORDER;
         order.forEach(function (key) {
+            if (key.startsWith('custom_')) {
+                var id = parseInt(key.slice(7));
+                var cs = (state.data.custom_sections || []).find(function (s) { return s.id === id; });
+                var panel = document.getElementById('section-' + key);
+                if (panel) panel.classList.toggle('section-content-hidden', cs ? cs.show === false : false);
+                return;
+            }
             var meta = SECTION_META[key];
             if (!meta || !meta.showKey) return;
             var panel = document.getElementById('section-' + key);
@@ -711,19 +769,29 @@
             nav.removeChild(b);
         });
 
+        // Remove the add custom section button if present (will be re-added below)
+        var existingAddBtn = nav.querySelector('.add-custom-section-nav');
+        if (existingAddBtn) existingAddBtn.remove();
+
         // Add buttons in section_order order, each with a drag handle
         // Insert before the Typography button so it stays last
         var typoNavBtn = nav.querySelector('.sidebar-nav-btn[data-section="typography"]');
         var order = state.data.section_order || DEFAULT_SECTION_ORDER;
         order.forEach(function (key) {
-            var meta = SECTION_META[key];
+            var meta = getSectionMeta(key);
             if (!meta) return;
-            var isVisible = !meta.showKey || state.data[meta.showKey] !== false;
+            var isVisible;
+            if (meta.isCustom) {
+                var cs = (state.data.custom_sections || []).find(function (s) { return s.id === meta.customId; });
+                isVisible = !cs || cs.show !== false;
+            } else {
+                isVisible = !meta.showKey || state.data[meta.showKey] !== false;
+            }
             var btn = document.createElement('button');
             btn.className = 'sidebar-nav-btn' + (activeSection === key ? ' active' : '') + (isVisible ? '' : ' section-hidden');
             btn.dataset.section = key;
             btn.innerHTML = '<span class="nav-drag-handle" title="Drag to reorder">⠿</span>' +
-                '<span class="nav-label">' + meta.label + '</span>' +
+                '<span class="nav-label">' + escHtml(meta.label) + '</span>' +
                 '<button class="nav-eye-btn" title="' + (isVisible ? 'Hide section' : 'Show section') + '" aria-label="' + (isVisible ? 'Hide section' : 'Show section') + '">' +
                 (isVisible ? EYE_OPEN_SVG : EYE_CLOSED_SVG) +
                 '</button>';
@@ -733,6 +801,17 @@
                 nav.appendChild(btn);
             }
         });
+
+        // Add "Add Custom Section" button before Typography
+        var addCustomBtn = document.createElement('button');
+        addCustomBtn.className = 'add-custom-section-nav';
+        addCustomBtn.textContent = '+ Add Custom Section';
+        addCustomBtn.addEventListener('click', addCustomSection);
+        if (typoNavBtn) {
+            nav.insertBefore(addCustomBtn, typoNavBtn);
+        } else {
+            nav.appendChild(addCustomBtn);
+        }
 
         updateSectionPanelVisibility();
 
@@ -744,7 +823,6 @@
         var nav = document.getElementById('sidebarNav');
         if (!nav) return;
         var allNavBtns = nav.querySelectorAll('.sidebar-nav-btn');
-        var allSections = document.querySelectorAll('.sidebar-section');
 
         allNavBtns.forEach(function (btn) {
             btn.addEventListener('click', function (e) {
@@ -752,14 +830,26 @@
                 if (e.target.closest('.nav-eye-btn')) {
                     pushHistory();
                     var key = btn.dataset.section;
-                    var meta = SECTION_META[key];
-                    if (meta && meta.showKey) {
-                        state.data[meta.showKey] = state.data[meta.showKey] === false ? true : false;
-                        renderSidebarNav();
-                        notifyChange();
+                    if (key && key.startsWith('custom_')) {
+                        var id = parseInt(key.slice(7));
+                        var cs = (state.data.custom_sections || []).find(function (s) { return s.id === id; });
+                        if (cs) {
+                            cs.show = cs.show === false ? true : false;
+                            renderSidebarNav();
+                            notifyChange();
+                        }
+                    } else {
+                        var meta = SECTION_META[key];
+                        if (meta && meta.showKey) {
+                            state.data[meta.showKey] = state.data[meta.showKey] === false ? true : false;
+                            renderSidebarNav();
+                            notifyChange();
+                        }
                     }
                     return;
                 }
+                // Query allSections fresh to include dynamically added custom section panels
+                var allSections = document.querySelectorAll('.sidebar-section');
                 allNavBtns.forEach(function (b) { b.classList.remove('active'); });
                 allSections.forEach(function (s) { s.classList.remove('active'); });
                 btn.classList.add('active');
@@ -1954,6 +2044,131 @@
 
     renderAwardList();
 
+    // ── Custom sections ──────────────────────────
+    function buildCustomSectionPanel(cs) {
+        var panel = document.createElement('div');
+        panel.className = 'sidebar-section';
+        panel.id = 'section-custom_' + cs.id;
+
+        var bulletsHtml = (cs.bullets || []).map(buildBulletHTML).join('');
+
+        panel.innerHTML =
+            '<div class="section-header">' +
+                '<input class="field-input custom-section-title" type="text" value="' + escHtml(cs.title || '') + '" placeholder="Section Title">' +
+                '<button class="add-btn">+ Add</button>' +
+            '</div>' +
+            '<div class="bullet-list" id="customBulletList_' + cs.id + '">' + bulletsHtml + '</div>' +
+            '<div class="custom-section-footer">' +
+                '<button class="delete-custom-section-btn">Delete this section</button>' +
+            '</div>';
+
+        var titleInput = panel.querySelector('.custom-section-title');
+        titleInput.addEventListener('input', function () {
+            cs.title = this.value;
+            renderSidebarNav();
+            notifyChange();
+        });
+
+        var addBulletBtn = panel.querySelector('.add-btn');
+        var bulletList = panel.querySelector('#customBulletList_' + cs.id);
+
+        addBulletBtn.addEventListener('click', function () {
+            pushHistory();
+            if (!cs.bullets) cs.bullets = [];
+            cs.bullets.push('');
+            bulletList.innerHTML = cs.bullets.map(buildBulletHTML).join('');
+            notifyChange();
+            var inputs = bulletList.querySelectorAll('.bullet-input');
+            if (inputs.length) inputs[inputs.length - 1].focus();
+        });
+
+        bulletList.addEventListener('input', function (e) {
+            if (e.target.classList.contains('bullet-input')) {
+                var bi = parseInt(e.target.dataset.bi);
+                if (!cs.bullets) cs.bullets = [];
+                cs.bullets[bi] = e.target.value;
+                notifyChange();
+            }
+        });
+
+        bulletList.addEventListener('click', function (e) {
+            var removeBtn = e.target.closest('.bullet-remove');
+            var upBtn = e.target.closest('.bullet-up');
+            var downBtn = e.target.closest('.bullet-down');
+            var bullets = cs.bullets || [];
+            var bi, tmp;
+
+            if (removeBtn) {
+                bi = parseInt(removeBtn.dataset.bi);
+                pushHistory();
+                bullets.splice(bi, 1);
+                bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                notifyChange();
+            } else if (upBtn) {
+                bi = parseInt(upBtn.dataset.bi);
+                if (bi > 0) {
+                    pushHistory();
+                    tmp = bullets[bi - 1];
+                    bullets[bi - 1] = bullets[bi];
+                    bullets[bi] = tmp;
+                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    notifyChange();
+                }
+            } else if (downBtn) {
+                bi = parseInt(downBtn.dataset.bi);
+                if (bi < bullets.length - 1) {
+                    pushHistory();
+                    tmp = bullets[bi];
+                    bullets[bi] = bullets[bi + 1];
+                    bullets[bi + 1] = tmp;
+                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    notifyChange();
+                }
+            }
+        });
+
+        panel.querySelector('.delete-custom-section-btn').addEventListener('click', function () {
+            if (confirm('Delete this custom section?')) {
+                pushHistory();
+                var idx = (state.data.custom_sections || []).findIndex(function (s) { return s.id === cs.id; });
+                if (idx !== -1) state.data.custom_sections.splice(idx, 1);
+                var orderIdx = state.data.section_order.indexOf('custom_' + cs.id);
+                if (orderIdx !== -1) state.data.section_order.splice(orderIdx, 1);
+                renderAllCustomSectionPanels();
+                renderSidebarNav();
+                notifyChange();
+            }
+        });
+
+        return panel;
+    }
+
+    function renderAllCustomSectionPanels() {
+        var container = document.getElementById('customSectionsContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        (state.data.custom_sections || []).forEach(function (cs) {
+            container.appendChild(buildCustomSectionPanel(cs));
+        });
+        initCustomSectionCounter();
+    }
+
+    function addCustomSection() {
+        pushHistory();
+        var id = nextCustomSectionId();
+        var cs = { id: id, title: '', bullets: [], show: true };
+        if (!state.data.custom_sections) state.data.custom_sections = [];
+        state.data.custom_sections.push(cs);
+        state.data.section_order.push('custom_' + id);
+        renderAllCustomSectionPanels();
+        renderSidebarNav();
+        notifyChange();
+        var newNavBtn = document.querySelector('[data-section="custom_' + id + '"]');
+        if (newNavBtn) newNavBtn.click();
+    }
+
+    renderAllCustomSectionPanels();
+
     // ── Typography controls ──────────────────────
     function bindTypoSlider(sliderId, valId, typoKey, unit) {
         var slider = document.getElementById(sliderId);
@@ -2349,6 +2564,7 @@
         var awardsVisibleEl = document.getElementById('awardsVisible');
         if (awardsVisibleEl) awardsVisibleEl.checked = state.data.show_awards !== false;
 
+        renderAllCustomSectionPanels();
         renderSidebarNav();
         renderExperienceList();
         renderEducationList();
