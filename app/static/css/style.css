@@ -29,11 +29,11 @@ body {
     background: var(--dark);
     color: #fff;
     height: var(--toolbar-h);
-    padding: 0 16px;
+    padding: 0 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
     position: relative;
     z-index: 200;
 }
@@ -42,43 +42,120 @@ body {
 .toolbar-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     flex: 1;
+    min-width: 0;
 }
 
 .toolbar-right {
     justify-content: flex-end;
+    gap: 6px;
 }
 
 .toolbar-center {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     flex: 0 1 auto;
 }
 
-.toolbar-title {
-    font-size: 16px;
-    font-weight: 600;
-    white-space: nowrap;
+/* Brand */
+.toolbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #fff;
+    padding: 0 4px;
 }
 
+.toolbar-logo {
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.toolbar-app-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    letter-spacing: -0.02em;
+    opacity: 0.95;
+}
+
+/* Inline resume name input */
+.resume-name-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    text-align: center;
+    padding: 4px 10px;
+    width: 220px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.resume-name-input::placeholder {
+    color: rgba(255,255,255,0.3);
+}
+
+.resume-name-input:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.resume-name-input:focus {
+    outline: none;
+    background: rgba(255,255,255,0.1);
+    border-color: var(--accent);
+}
+
+/* Divider */
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255,255,255,0.14);
+    flex-shrink: 0;
+    margin: 0 4px;
+}
+
+/* Buttons */
 .toolbar-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     background: transparent;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.18);
     color: #fff;
-    padding: 5px 12px;
+    padding: 5px 11px;
     border-radius: 5px;
     font-size: 13px;
     font-weight: 500;
+    font-family: inherit;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s, border-color 0.15s, opacity 0.15s;
     white-space: nowrap;
+    line-height: 1;
 }
 
 .toolbar-btn:hover {
     background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.35);
+    border-color: rgba(255,255,255,0.32);
+}
+
+.toolbar-btn:active {
+    background: rgba(255,255,255,0.16);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.toolbar-btn:disabled:hover {
+    background: transparent;
+    border-color: rgba(255,255,255,0.18);
 }
 
 .toolbar-btn--primary {
@@ -91,9 +168,51 @@ body {
     border-color: var(--accent-hover);
 }
 
+.toolbar-btn--primary:active {
+    background: #2f44c0;
+    border-color: #2f44c0;
+}
+
+.toolbar-btn--icon {
+    padding: 5px 7px;
+}
+
+/* Auto-fit in toolbar */
+.toolbar-btn--autofit {
+    border-color: rgba(255,255,255,0.18);
+}
+
+.toolbar-btn--autofit.auto-fit-btn--overflow {
+    background: #ef4444;
+    border-color: #ef4444;
+    animation: auto-fit-pulse 1.6s ease-in-out infinite;
+}
+
+.toolbar-btn--autofit.auto-fit-btn--overflow:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+.toolbar-btn--autofit:disabled {
+    opacity: 0.35;
+    cursor: default;
+    animation: none;
+}
+
 .sidebar-toggle {
-    padding: 5px 8px;
+    padding: 5px 7px;
     display: none; /* shown on mobile */
+}
+
+/* Secondary icon-only toolbar buttons — less visual weight than primary actions */
+.toolbar-btn--secondary {
+    border-color: rgba(255,255,255,0.12);
+    opacity: 0.8;
+}
+
+.toolbar-btn--secondary:hover {
+    opacity: 1;
+    border-color: rgba(255,255,255,0.28);
 }
 
 /* ── Export dropdown ──────────────────────────── */
@@ -218,10 +337,19 @@ body {
 }
 
 /* Save status */
+.save-status-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 68px;
+    justify-content: flex-start;
+}
+
 .save-status {
     font-size: 12px;
     color: rgba(255,255,255,0.55);
     white-space: nowrap;
+    transition: color 0.2s;
 }
 
 .save-status.saving { color: #fbbf24; }
