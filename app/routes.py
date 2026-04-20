@@ -117,6 +117,62 @@ def get_resume_pdf(resume_id):
     )
 
 
+@bp.route('/api/resume/<resume_id>/ats-score', methods=['GET'])
+def get_ats_score(resume_id):
+    try:
+        data, _ = load_resume(resume_id)
+    except FileNotFoundError:
+        return jsonify({'error': 'Resume not found'}), 404
+
+    from app.services.ats_optimizer import analyze_ats_score, suggest_improvements
+
+    result = analyze_ats_score(data)
+    raw_suggestions = suggest_improvements(data)
+
+    issues = [_classify_issue(msg) for msg in result['issues']]
+    suggestions = [_classify_suggestion(msg, i) for i, msg in enumerate(raw_suggestions)]
+
+    return jsonify({'score': result['score'], 'issues': issues, 'suggestions': suggestions})
+
+
+def _classify_issue(message: str) -> dict:
+    msg_lower = message.lower()
+    if any(w in msg_lower for w in ('experience', 'bullet', 'employment')):
+        section = 'experience'
+    elif 'education' in msg_lower:
+        section = 'education'
+    elif 'skill' in msg_lower:
+        section = 'skills'
+    elif any(w in msg_lower for w in ('contact', 'name', 'email', 'phone')):
+        section = 'contact'
+    elif 'summary' in msg_lower:
+        section = 'summary'
+    else:
+        section = 'general'
+
+    severity = 'error' if any(w in msg_lower for w in ('missing', 'malformed')) else 'warning'
+    return {'severity': severity, 'message': message, 'section': section}
+
+
+def _classify_suggestion(message: str, index: int) -> dict:
+    msg_lower = message.lower()
+    if any(w in msg_lower for w in ('experience', 'bullet', 'role')):
+        section = 'experience'
+    elif 'education' in msg_lower:
+        section = 'education'
+    elif 'skill' in msg_lower:
+        section = 'skills'
+    elif any(w in msg_lower for w in ('linkedin', 'contact', 'email', 'phone')):
+        section = 'contact'
+    elif 'summary' in msg_lower:
+        section = 'summary'
+    else:
+        section = 'general'
+
+    priority = 'high' if index < 2 else 'medium'
+    return {'message': message, 'section': section, 'priority': priority}
+
+
 @bp.route('/api/resume/<resume_id>', methods=['DELETE'])
 def remove_resume(resume_id):
     try:
