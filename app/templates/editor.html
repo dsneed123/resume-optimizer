@@ -20,6 +20,20 @@
                 <h1 class="toolbar-title">Resume Optimizer</h1>
             </div>
             <div class="toolbar-center">
+                <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z / Cmd+Z)" disabled>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M3.5 5.5H9a3.5 3.5 0 010 7H5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5.5 3.5l-2 2 2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Undo
+                </button>
+                <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)" disabled>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M12.5 5.5H7a3.5 3.5 0 000 7h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M10.5 3.5l2 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Redo
+                </button>
                 <span class="save-status" id="saveStatus"></span>
             </div>
             <div class="toolbar-right">
