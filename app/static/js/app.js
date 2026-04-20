@@ -409,4 +409,260 @@
             notifyChange();
         });
     }
+
+    // ── Experience section ───────────────────────
+    function escHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    var expOpenStates = [];
+
+    function newExperienceEntry() {
+        return { company: '', title: '', location: '', start_date: '', end_date: '', present: false, bullets: [] };
+    }
+
+    function buildBulletHTML(text, bi) {
+        return '<div class="bullet-item">' +
+            '<div class="bullet-reorder">' +
+            '<button class="bullet-up" data-bi="' + bi + '" title="Move up">▲</button>' +
+            '<button class="bullet-down" data-bi="' + bi + '" title="Move down">▼</button>' +
+            '</div>' +
+            '<input class="field-input bullet-input" data-bi="' + bi + '" type="text" value="' + escHtml(text) + '" placeholder="Describe an achievement...">' +
+            '<button class="bullet-remove" data-bi="' + bi + '" title="Remove bullet">✕</button>' +
+            '</div>';
+    }
+
+    function buildExpItem(entry, index) {
+        var item = document.createElement('div');
+        item.className = 'exp-item' + (expOpenStates[index] === false ? ' collapsed' : '');
+        item.dataset.index = String(index);
+        item.draggable = true;
+
+        var label = [entry.title, entry.company].filter(Boolean).join(' @ ') || 'New Entry';
+        var chevron = expOpenStates[index] === false ? '▸' : '▾';
+        var endDisabled = entry.present ? ' disabled' : '';
+        var bulletsHTML = entry.bullets.map(buildBulletHTML).join('');
+
+        item.innerHTML =
+            '<div class="exp-item-header">' +
+                '<span class="drag-handle" title="Drag to reorder">⠿</span>' +
+                '<span class="exp-item-label">' + escHtml(label) + '</span>' +
+                '<div class="exp-item-actions">' +
+                    '<button class="exp-toggle-btn" title="Expand/collapse">' + chevron + '</button>' +
+                    '<button class="exp-delete-btn" title="Delete entry">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="exp-item-body">' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Company</label>' +
+                    '<input class="field-input exp-field" data-field="company" type="text" value="' + escHtml(entry.company) + '" placeholder="Acme Corp">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Job Title</label>' +
+                    '<input class="field-input exp-field" data-field="title" type="text" value="' + escHtml(entry.title) + '" placeholder="Software Engineer">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Location</label>' +
+                    '<input class="field-input exp-field" data-field="location" type="text" value="' + escHtml(entry.location) + '" placeholder="San Francisco, CA">' +
+                '</div>' +
+                '<div class="date-row">' +
+                    '<div class="field-group">' +
+                        '<label class="field-label">Start Date</label>' +
+                        '<input class="field-input exp-field" data-field="start_date" type="text" value="' + escHtml(entry.start_date) + '" placeholder="Jan 2020">' +
+                    '</div>' +
+                    '<div class="field-group">' +
+                        '<label class="field-label">End Date</label>' +
+                        '<input class="field-input exp-field" data-field="end_date" type="text" value="' + escHtml(entry.end_date) + '" placeholder="Dec 2022"' + endDisabled + '>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="present-row">' +
+                    '<input type="checkbox" class="exp-present" id="exp-present-' + index + '"' + (entry.present ? ' checked' : '') + '>' +
+                    '<label class="field-label" for="exp-present-' + index + '">Currently working here</label>' +
+                '</div>' +
+                '<div class="bullet-section">' +
+                    '<div class="bullet-list-label">Bullet Points</div>' +
+                    '<div class="bullet-list">' + bulletsHTML + '</div>' +
+                    '<button class="add-bullet-btn">+ Add bullet</button>' +
+                '</div>' +
+            '</div>';
+
+        var header = item.querySelector('.exp-item-header');
+        var toggleBtn = item.querySelector('.exp-toggle-btn');
+        var bulletList = item.querySelector('.bullet-list');
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.exp-delete-btn') || e.target.closest('.drag-handle')) return;
+            var nowCollapsed = item.classList.toggle('collapsed');
+            expOpenStates[index] = !nowCollapsed;
+            toggleBtn.textContent = nowCollapsed ? '▸' : '▾';
+        });
+
+        item.querySelector('.exp-delete-btn').addEventListener('click', function () {
+            if (confirm('Delete this experience entry?')) {
+                state.data.experience.splice(index, 1);
+                expOpenStates.splice(index, 1);
+                renderExperienceList();
+                notifyChange();
+            }
+        });
+
+        item.querySelectorAll('.exp-field').forEach(function (input) {
+            input.addEventListener('input', function () {
+                state.data.experience[index][input.dataset.field] = input.value;
+                var e2 = state.data.experience[index];
+                item.querySelector('.exp-item-label').textContent =
+                    [e2.title, e2.company].filter(Boolean).join(' @ ') || 'New Entry';
+                notifyChange();
+            });
+        });
+
+        item.querySelector('.exp-present').addEventListener('change', function () {
+            state.data.experience[index].present = this.checked;
+            var endInput = item.querySelector('[data-field="end_date"]');
+            if (this.checked) {
+                state.data.experience[index].end_date = 'Present';
+                endInput.value = 'Present';
+                endInput.disabled = true;
+            } else {
+                state.data.experience[index].end_date = '';
+                endInput.value = '';
+                endInput.disabled = false;
+            }
+            notifyChange();
+        });
+
+        bulletList.addEventListener('input', function (e) {
+            if (e.target.classList.contains('bullet-input')) {
+                var bi = parseInt(e.target.dataset.bi);
+                state.data.experience[index].bullets[bi] = e.target.value;
+                notifyChange();
+            }
+        });
+
+        bulletList.addEventListener('click', function (e) {
+            var removeBtn = e.target.closest('.bullet-remove');
+            var upBtn = e.target.closest('.bullet-up');
+            var downBtn = e.target.closest('.bullet-down');
+            var bullets = state.data.experience[index].bullets;
+            var bi, tmp;
+
+            if (removeBtn) {
+                bi = parseInt(removeBtn.dataset.bi);
+                bullets.splice(bi, 1);
+                bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                notifyChange();
+            } else if (upBtn) {
+                bi = parseInt(upBtn.dataset.bi);
+                if (bi > 0) {
+                    tmp = bullets[bi - 1];
+                    bullets[bi - 1] = bullets[bi];
+                    bullets[bi] = tmp;
+                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    notifyChange();
+                }
+            } else if (downBtn) {
+                bi = parseInt(downBtn.dataset.bi);
+                if (bi < bullets.length - 1) {
+                    tmp = bullets[bi];
+                    bullets[bi] = bullets[bi + 1];
+                    bullets[bi + 1] = tmp;
+                    bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
+                    notifyChange();
+                }
+            }
+        });
+
+        item.querySelector('.add-bullet-btn').addEventListener('click', function () {
+            state.data.experience[index].bullets.push('');
+            bulletList.innerHTML = state.data.experience[index].bullets.map(buildBulletHTML).join('');
+            notifyChange();
+            var inputs = bulletList.querySelectorAll('.bullet-input');
+            if (inputs.length) inputs[inputs.length - 1].focus();
+        });
+
+        return item;
+    }
+
+    function bindExpDragDrop() {
+        var listEl = document.getElementById('experienceList');
+        if (!listEl) return;
+        var items = listEl.querySelectorAll('.exp-item');
+        var dragSrcIndex = null;
+
+        items.forEach(function (item) {
+            item.addEventListener('dragstart', function (e) {
+                dragSrcIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', function () {
+                item.classList.remove('dragging');
+                items.forEach(function (i) { i.classList.remove('drag-over'); });
+                dragSrcIndex = null;
+            });
+
+            item.addEventListener('dragover', function (e) {
+                if (dragSrcIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', function () {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dropIndex = parseInt(item.dataset.index);
+                if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    var exp = state.data.experience;
+                    var moved = exp.splice(dragSrcIndex, 1)[0];
+                    exp.splice(dropIndex, 0, moved);
+                    var openMoved = expOpenStates.splice(dragSrcIndex, 1)[0];
+                    expOpenStates.splice(dropIndex, 0, openMoved);
+                    renderExperienceList();
+                    notifyChange();
+                }
+                dragSrcIndex = null;
+            });
+        });
+    }
+
+    function renderExperienceList() {
+        var listEl = document.getElementById('experienceList');
+        if (!listEl) return;
+
+        if (!state.data.experience.length) {
+            listEl.innerHTML = '<p class="empty-state">No experience added yet.</p>';
+            return;
+        }
+
+        while (expOpenStates.length < state.data.experience.length) expOpenStates.push(true);
+        expOpenStates.length = state.data.experience.length;
+
+        listEl.innerHTML = '';
+        state.data.experience.forEach(function (entry, index) {
+            listEl.appendChild(buildExpItem(entry, index));
+        });
+
+        bindExpDragDrop();
+    }
+
+    var addExpBtn = document.getElementById('addExperience');
+    if (addExpBtn) {
+        addExpBtn.addEventListener('click', function () {
+            state.data.experience.push(newExperienceEntry());
+            expOpenStates.push(true);
+            renderExperienceList();
+            notifyChange();
+        });
+    }
+
+    renderExperienceList();
 })();
