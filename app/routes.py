@@ -1,6 +1,7 @@
+import os
 import uuid
 
-from flask import Blueprint, Response, jsonify, render_template, request
+from flask import Blueprint, Response, current_app, jsonify, render_template, request
 
 from app.limiter import limiter
 from app.models import default_typography
@@ -96,6 +97,17 @@ def import_resume():
         return jsonify({'error': 'File exceeds 10 MB limit'}), 413
 
     is_pdf = ext == 'pdf' or mimetype == 'application/pdf'
+
+    from app.services.upload_security import cleanup_old_uploads, save_upload, validate_magic_bytes
+    if not validate_magic_bytes(file_bytes, is_pdf):
+        return jsonify({'error': 'File content does not match declared type'}), 415
+
+    upload_dir = os.path.join(current_app.instance_path, 'uploads')
+    save_upload(upload_dir, file_bytes, 'pdf' if is_pdf else 'docx')
+    try:
+        cleanup_old_uploads(upload_dir)
+    except OSError:
+        pass
 
     try:
         if is_pdf:
