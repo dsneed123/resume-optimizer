@@ -175,6 +175,29 @@ def get_resume_pdf(resume_id):
     )
 
 
+@bp.route('/api/resume/<resume_id>/docx', methods=['GET'])
+def get_resume_docx(resume_id):
+    try:
+        data, typography = load_resume(resume_id)
+    except FileNotFoundError:
+        return jsonify({'error': 'Resume not found'}), 404
+    try:
+        from app.services.docx_export import export_docx
+        docx_bytes = export_docx(data, typography)
+    except Exception:
+        return jsonify({'error': 'DOCX generation failed'}), 500
+    name = data.get('header', {}).get('name', 'resume') or 'resume'
+    filename = f"{name}-resume.docx"
+    return Response(
+        docx_bytes,
+        status=200,
+        headers={
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition': f'attachment; filename="{filename}"',
+        },
+    )
+
+
 @bp.route('/api/resume/<resume_id>/ats-score', methods=['GET'])
 def get_ats_score(resume_id):
     try:
