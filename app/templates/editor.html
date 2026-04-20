@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div id="app">
+    <div id="app" class="app-loading">
         <header class="toolbar">
             <div class="toolbar-left">
                 <button class="toolbar-btn sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
@@ -34,6 +34,11 @@
                     </svg>
                     Redo
                 </button>
+                <span class="save-spinner" id="saveSpinner" hidden aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="spin">
+                        <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="14 8" stroke-linecap="round"/>
+                    </svg>
+                </span>
                 <span class="save-status" id="saveStatus"></span>
             </div>
             <div class="toolbar-right">
@@ -140,6 +145,19 @@
 
         <main class="workspace">
             <aside class="sidebar" id="sidebar">
+                <div class="sidebar-skeleton" id="sidebarSkeleton" aria-hidden="true">
+                    <div class="skel skel-nav-strip"></div>
+                    <div class="skel-fields-wrap">
+                        <div class="skel skel-label"></div>
+                        <div class="skel skel-input"></div>
+                        <div class="skel skel-label"></div>
+                        <div class="skel skel-input"></div>
+                        <div class="skel skel-label"></div>
+                        <div class="skel skel-input"></div>
+                        <div class="skel skel-label"></div>
+                        <div class="skel skel-input"></div>
+                    </div>
+                </div>
                 <nav class="sidebar-nav" id="sidebarNav">
                     <button class="sidebar-nav-btn active" data-section="header">Contact</button>
                     <!-- Remaining section tabs rendered by JS based on section_order -->
@@ -574,6 +592,19 @@
                     Content exceeds one page. Reduce content or adjust typography.
                 </div>
                 <div class="page-wrap" id="pageWrap">
+                    <div class="preview-skeleton" id="previewSkeleton" aria-hidden="true">
+                        <div class="skel skel-resume-name"></div>
+                        <div class="skel skel-resume-contact"></div>
+                        <div class="skel skel-resume-divider"></div>
+                        <div class="skel skel-resume-section-title"></div>
+                        <div class="skel skel-resume-line"></div>
+                        <div class="skel skel-resume-line skel-resume-line--long"></div>
+                        <div class="skel skel-resume-line skel-resume-line--med"></div>
+                        <div class="skel skel-resume-section-title" style="margin-top:16px"></div>
+                        <div class="skel skel-resume-line"></div>
+                        <div class="skel skel-resume-line skel-resume-line--long"></div>
+                        <div class="skel skel-resume-line skel-resume-line--med"></div>
+                    </div>
                     <div class="page" id="resumePage">
                         <p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>
                         <div class="page-fill-indicator" id="pageFillIndicator" aria-label="Page fill">
@@ -668,7 +699,12 @@
                         aria-label="LinkedIn profile text"
                     ></textarea>
                 </div>
-                <div class="import-progress" id="importProgress" hidden>Processing your file, this may take a moment&hellip;</div>
+                <div class="import-progress" id="importProgress" hidden>
+                    Processing your file, this may take a moment&hellip;
+                    <div class="import-progress-bar" aria-hidden="true">
+                        <div class="import-progress-fill"></div>
+                    </div>
+                </div>
                 <div class="import-error" id="importError" hidden></div>
             </div>
             <div class="modal-footer">
