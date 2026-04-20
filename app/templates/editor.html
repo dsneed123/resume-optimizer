@@ -17,7 +17,7 @@
                         <rect y="13" width="18" height="2" rx="1" fill="currentColor"/>
                     </svg>
                 </button>
-                <h1 class="toolbar-title">Resume Optimizer</h1>
+                <h1 class="toolbar-title" id="toolbarTitle">Resume Optimizer</h1>
             </div>
             <div class="toolbar-center">
                 <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z / Cmd+Z)" disabled>
@@ -196,6 +196,11 @@
                 <div class="sidebar-section active" id="section-header">
                     <div class="section-header">
                         <h2 class="section-title">Contact Info</h2>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="resumeName">Resume Name</label>
+                        <input class="field-input" type="text" id="resumeName" placeholder="e.g. Google SWE Application">
+                        <div class="resume-metadata" id="resumeMetaInfo"></div>
                     </div>
                     <div class="field-group">
                         <label class="field-label" for="name">Full Name</label>

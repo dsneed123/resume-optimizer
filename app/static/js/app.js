@@ -863,7 +863,7 @@
 
     if (!pageEl || !previewEl) return;
 
-    const state = { data: defaultData(), typo: defaultTypo() };
+    const state = { data: defaultData(), typo: defaultTypo(), meta: { resume_name: '', created_at: '', updated_at: '' } };
     const preview = new ResumePreview(pageEl, previewEl);
     preview.update(state.data, state.typo);
 
@@ -954,6 +954,31 @@
     var lastSavedSnapshot = null;
     var saveStatusEl = document.getElementById('saveStatus');
     var saveSpinnerEl = document.getElementById('saveSpinner');
+    var toolbarTitleEl = document.getElementById('toolbarTitle');
+    var resumeNameEl = document.getElementById('resumeName');
+    var resumeMetaInfoEl = document.getElementById('resumeMetaInfo');
+
+    function updateToolbarTitle() {
+        if (!toolbarTitleEl) return;
+        var name = state.meta.resume_name;
+        if (!name) {
+            var fullName = state.data.header && state.data.header.name;
+            name = fullName ? fullName + ' Resume' : 'Untitled Resume';
+        }
+        toolbarTitleEl.textContent = name;
+    }
+
+    function updateResumeMetaInfo() {
+        if (!resumeMetaInfoEl) return;
+        var parts = [];
+        if (state.meta.created_at) {
+            parts.push('Created ' + _formatResumeDate(state.meta.created_at));
+        }
+        if (state.meta.updated_at) {
+            parts.push('Modified ' + _formatResumeDate(state.meta.updated_at));
+        }
+        resumeMetaInfoEl.textContent = parts.join('\u2002\u00b7\u2002');
+    }
 
     function setSaveStatus(status) {
         if (!saveStatusEl) return;
@@ -978,10 +1003,10 @@
 
     function doSave() {
         if (!resumeId) return;
-        var snapshot = JSON.stringify({ data: state.data, typo: state.typo });
+        var snapshot = JSON.stringify({ data: state.data, typo: state.typo, resume_name: state.meta.resume_name });
         if (snapshot === lastSavedSnapshot) return;
         setSaveStatus('saving');
-        var bodyStr = JSON.stringify({ data: state.data, typography: state.typo });
+        var bodyStr = JSON.stringify({ data: state.data, typography: state.typo, resume_name: state.meta.resume_name });
         fetch('/api/resume/' + resumeId, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1008,7 +1033,9 @@
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 resumeId = res.id;
-                lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+                lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo, resume_name: state.meta.resume_name });
+                updateToolbarTitle();
+                updateResumeMetaInfo();
             })
             .catch(function () {});
     }
@@ -1061,6 +1088,7 @@
         scheduleSave();
         scheduleAtsRefresh();
         updateSectionBadges();
+        updateToolbarTitle();
     }
 
     // ── Undo/Redo History ────────────────────────
@@ -1362,6 +1390,14 @@
     bindField('linkedin', 'header.linkedin');
     bindField('website', 'header.website');
     bindField('summary', 'summary');
+
+    if (resumeNameEl) {
+        resumeNameEl.addEventListener('input', function () {
+            state.meta.resume_name = resumeNameEl.value;
+            updateToolbarTitle();
+            scheduleSave();
+        });
+    }
 
     // ── Summary char count + visibility toggle ───
     const summaryEl = document.getElementById('summary');
@@ -4274,14 +4310,18 @@
                 pushHistory();
                 resumeId = id;
                 state.data = res.data;
+                state.meta.resume_name = res.resume_name || '';
+                state.meta.created_at = res.created_at || '';
+                state.meta.updated_at = res.updated_at || '';
                 applyTypoToControls(res.typography);
-                lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+                lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo, resume_name: state.meta.resume_name });
                 expOpenStates.length = 0;
                 eduOpenStates.length = 0;
                 skillOpenStates.length = 0;
                 certOpenStates.length = 0;
                 projOpenStates.length = 0;
                 awardOpenStates.length = 0;
+                if (resumeNameEl) resumeNameEl.value = state.meta.resume_name;
                 ['name','email','phone','location','linkedin','website'].forEach(function (f) {
                     var el = document.getElementById(f);
                     if (el) el.value = (state.data.header && state.data.header[f]) ? state.data.header[f] : '';
@@ -4296,6 +4336,7 @@
                 renderCertList();
                 renderProjectList();
                 renderAwardList();
+                updateResumeMetaInfo();
                 notifyChange();
                 closeResumesModal();
                 var displayName = (res.data.header && res.data.header.name) ? res.data.header.name : 'Untitled';
@@ -4309,6 +4350,7 @@
     function _resetEditorToNew(newId, newData) {
         resumeId = newId;
         state.data = newData || defaultData();
+        state.meta = { resume_name: '', created_at: '', updated_at: '' };
         applyTypoToControls(state.typo);
         expOpenStates.length = 0;
         eduOpenStates.length = 0;
@@ -4316,6 +4358,7 @@
         certOpenStates.length = 0;
         projOpenStates.length = 0;
         awardOpenStates.length = 0;
+        if (resumeNameEl) resumeNameEl.value = '';
         ['name','email','phone','location','linkedin','website'].forEach(function (f) {
             var el = document.getElementById(f);
             if (el) el.value = '';
@@ -4330,8 +4373,9 @@
         renderCertList();
         renderProjectList();
         renderAwardList();
+        updateResumeMetaInfo();
         notifyChange();
-        lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+        lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo, resume_name: state.meta.resume_name });
     }
 
     if (resumesModalBody) {
