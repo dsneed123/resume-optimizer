@@ -1,6 +1,22 @@
 import re
 from typing import Optional
 
+
+class ImportError(Exception):
+    pass
+
+
+class PasswordProtectedError(ImportError):
+    pass
+
+
+class CorruptedFileError(ImportError):
+    pass
+
+
+class EmptyFileError(ImportError):
+    pass
+
 _LIGATURE_MAP = str.maketrans({
     '\ufb00': 'ff', '\ufb01': 'fi', '\ufb02': 'fl',
     '\ufb03': 'ffi', '\ufb04': 'ffl', '\ufb05': 'st', '\ufb06': 'st',
@@ -460,56 +476,73 @@ def _detect_two_columns(words: list[dict], page_w: float) -> bool:
 def _extract_text_from_pdf(file_bytes: bytes) -> str:
     import io
     import pdfplumber
+
+    if b'/Encrypt' in file_bytes:
+        raise PasswordProtectedError("This PDF is password-protected")
+
+    try:
+        pdf_file = pdfplumber.open(io.BytesIO(file_bytes))
+    except Exception as exc:
+        msg = str(exc).lower()
+        if any(kw in msg for kw in ('encrypt', 'password', 'decrypt')):
+            raise PasswordProtectedError("This PDF is password-protected") from exc
+        raise CorruptedFileError("Could not read this file") from exc
+
     page_texts = []
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        for page_num, page in enumerate(pdf.pages):
-            words = page.extract_words(x_tolerance=3, y_tolerance=3)
-            if not words:
-                page_text = page.extract_text()
-                if page_text:
-                    page_texts.append(page_text.translate(_LIGATURE_MAP))
-                continue
-
-            page_h = page.height
-            page_w = page.width
-            margin = page_h * 0.04
-
-            # Strip repeated header region on pages after the first (titles, name repeats)
-            if page_num > 0:
-                words = [w for w in words if margin < w['top'] < page_h - margin]
-            else:
-                words = [w for w in words if w['top'] < page_h - margin]
-
-            if not words:
-                continue
-
-            # Pre-compute font metadata for formatting-based header detection
-            chars = page.chars
-            median_size = _get_median_font_size(chars) if chars else 0.0
-            chars_by_top: dict[int, list[dict]] = {}
-            if chars:
-                for c in chars:
-                    chars_by_top.setdefault(int(c.get('top', 0)), []).append(c)
-
-            if _detect_two_columns(words, page_w):
-                mid_x = page_w / 2
-                left = [w for w in words if (w['x0'] + w['x1']) / 2 < mid_x]
-                right = [w for w in words if (w['x0'] + w['x1']) / 2 >= mid_x]
-                groups = _group_words_by_line(left) + _group_words_by_line(right)
-            else:
-                groups = _group_words_by_line(words)
-
-            result_lines = []
-            for group in groups:
-                line_text = " ".join(w['text'] for w in group)
-                if _is_header_footer_line(line_text):
+    try:
+        with pdf_file as pdf:
+            for page_num, page in enumerate(pdf.pages):
+                words = page.extract_words(x_tolerance=3, y_tolerance=3)
+                if not words:
+                    page_text = page.extract_text()
+                    if page_text:
+                        page_texts.append(page_text.translate(_LIGATURE_MAP))
                     continue
-                if chars_by_top and _line_is_bold_or_large(group[0]['top'], chars_by_top, median_size):
-                    line_text = _HEADER_MARKER + line_text
-                result_lines.append(line_text)
 
-            if result_lines:
-                page_texts.append("\n".join(result_lines).translate(_LIGATURE_MAP))
+                page_h = page.height
+                page_w = page.width
+                margin = page_h * 0.04
+
+                # Strip repeated header region on pages after the first (titles, name repeats)
+                if page_num > 0:
+                    words = [w for w in words if margin < w['top'] < page_h - margin]
+                else:
+                    words = [w for w in words if w['top'] < page_h - margin]
+
+                if not words:
+                    continue
+
+                # Pre-compute font metadata for formatting-based header detection
+                chars = page.chars
+                median_size = _get_median_font_size(chars) if chars else 0.0
+                chars_by_top: dict[int, list[dict]] = {}
+                if chars:
+                    for c in chars:
+                        chars_by_top.setdefault(int(c.get('top', 0)), []).append(c)
+
+                if _detect_two_columns(words, page_w):
+                    mid_x = page_w / 2
+                    left = [w for w in words if (w['x0'] + w['x1']) / 2 < mid_x]
+                    right = [w for w in words if (w['x0'] + w['x1']) / 2 >= mid_x]
+                    groups = _group_words_by_line(left) + _group_words_by_line(right)
+                else:
+                    groups = _group_words_by_line(words)
+
+                result_lines = []
+                for group in groups:
+                    line_text = " ".join(w['text'] for w in group)
+                    if _is_header_footer_line(line_text):
+                        continue
+                    if chars_by_top and _line_is_bold_or_large(group[0]['top'], chars_by_top, median_size):
+                        line_text = _HEADER_MARKER + line_text
+                    result_lines.append(line_text)
+
+                if result_lines:
+                    page_texts.append("\n".join(result_lines).translate(_LIGATURE_MAP))
+    except (PasswordProtectedError, CorruptedFileError):
+        raise
+    except Exception as exc:
+        raise CorruptedFileError("Could not read this file") from exc
 
     return "\n".join(page_texts)
 
@@ -524,13 +557,13 @@ def import_text(text: str) -> dict:
 
 
 def import_pdf(file_bytes: bytes) -> dict:
-    try:
-        full_text = _extract_text_from_pdf(file_bytes)
-    except Exception:
-        return _fallback_resume("")
+    if not file_bytes:
+        raise EmptyFileError("No text content found")
+
+    full_text = _extract_text_from_pdf(file_bytes)
 
     if not full_text.strip():
-        return _fallback_resume("")
+        raise EmptyFileError("No text content found")
 
     try:
         return _parse_resume_text(full_text)

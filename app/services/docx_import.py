@@ -4,6 +4,8 @@ from typing import Optional
 from docx import Document
 from docx.oxml.ns import qn
 
+from app.services.pdf_import import CorruptedFileError, EmptyFileError
+
 # Shared with pdf_import — marks bold/header-formatted lines so parsers can detect them
 _HEADER_MARKER = '\x02'
 
@@ -467,13 +469,16 @@ def _fallback_resume(text: str) -> dict:
 
 
 def import_docx(file_bytes: bytes) -> dict:
+    if not file_bytes:
+        raise EmptyFileError("No text content found")
+
     try:
         paragraphs = _extract_paragraphs(file_bytes)
-    except Exception:
-        return _fallback_resume("")
+    except Exception as exc:
+        raise CorruptedFileError("Could not read this file") from exc
 
     if not any(p["text"].strip() for p in paragraphs):
-        return _fallback_resume("")
+        raise EmptyFileError("No text content found")
 
     try:
         return _parse_resume_paragraphs(paragraphs)

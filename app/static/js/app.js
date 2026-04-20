@@ -2688,6 +2688,7 @@
     var importError     = document.getElementById('importError');
     var importConfirmBtn = document.getElementById('importConfirmBtn');
     var importSpinner   = document.getElementById('importSpinner');
+    var importProgress  = document.getElementById('importProgress');
     var importCancelBtn = document.getElementById('importCancelBtn');
     var importModalClose = document.getElementById('importModalClose');
     var importBtn       = document.getElementById('importBtn');
@@ -2750,6 +2751,7 @@
         if (importFileInput) importFileInput.value = '';
         if (importFileInfo) importFileInfo.hidden = true;
         if (importError) importError.hidden = true;
+        if (importProgress) importProgress.hidden = true;
         if (importConfirmBtn) importConfirmBtn.disabled = true;
         if (importSpinner) importSpinner.hidden = true;
         if (importDropzone) importDropzone.classList.remove('drag-over');
@@ -2787,10 +2789,18 @@
         if (importConfirmBtn) importConfirmBtn.disabled = false;
     }
 
-    function showImportError(msg) {
-        if (importError) {
-            importError.textContent = msg;
-            importError.hidden = false;
+    function showImportError(msg, offerPasteText) {
+        if (!importError) return;
+        importError.hidden = false;
+        while (importError.firstChild) importError.removeChild(importError.firstChild);
+        importError.appendChild(document.createTextNode(msg));
+        if (offerPasteText) {
+            var link = document.createElement('button');
+            link.type = 'button';
+            link.className = 'import-error-link';
+            link.textContent = ' Try pasting text instead.';
+            link.addEventListener('click', function () { switchImportTab('text'); });
+            importError.appendChild(link);
         }
     }
 
@@ -2932,12 +2942,16 @@
         });
     }
 
+    var _LARGE_FILE_BYTES = 2 * 1024 * 1024; // 2 MB
+
     if (importConfirmBtn) {
         importConfirmBtn.addEventListener('click', function () {
             importConfirmBtn.disabled = true;
             if (importSpinner) importSpinner.hidden = false;
             if (importError) importError.hidden = true;
+            if (importProgress) importProgress.hidden = true;
 
+            var isFileTab = importActiveTab === 'file';
             var fetchPromise;
             if (importActiveTab === 'text') {
                 var text = importTextarea ? importTextarea.value : '';
@@ -2969,6 +2983,9 @@
                     if (importSpinner) importSpinner.hidden = true;
                     return;
                 }
+                if (importProgress && selectedFile.size > _LARGE_FILE_BYTES) {
+                    importProgress.hidden = false;
+                }
                 var formData = new FormData();
                 formData.append('file', selectedFile);
                 fetchPromise = fetch('/api/import', { method: 'POST', body: formData });
@@ -2982,8 +2999,9 @@
                 })
                 .then(function (res) {
                     if (importSpinner) importSpinner.hidden = true;
+                    if (importProgress) importProgress.hidden = true;
                     if (!res.ok) {
-                        showImportError(res.body.error || 'Import failed. Please try again.');
+                        showImportError(res.body.error || 'Import failed. Please try again.', isFileTab);
                         importConfirmBtn.disabled = false;
                         return;
                     }
@@ -2994,7 +3012,8 @@
                 })
                 .catch(function () {
                     if (importSpinner) importSpinner.hidden = true;
-                    showImportError('Network error. Please check your connection and try again.');
+                    if (importProgress) importProgress.hidden = true;
+                    showImportError('Network error. Please check your connection and try again.', isFileTab);
                     importConfirmBtn.disabled = false;
                 });
         });

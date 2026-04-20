@@ -3,6 +3,7 @@ import uuid
 from flask import Blueprint, Response, jsonify, render_template, request
 
 from app.models import default_typography
+from app.services.pdf_import import CorruptedFileError, EmptyFileError, PasswordProtectedError
 from app.services.storage import (
     create_new_resume,
     delete_resume,
@@ -98,7 +99,13 @@ def import_resume():
         else:
             from app.services.docx_import import import_docx
             data = import_docx(file_bytes)
-    except Exception:
+    except Exception as exc:
+        if isinstance(exc, PasswordProtectedError):
+            return jsonify({'error': 'This PDF is password-protected'}), 422
+        if isinstance(exc, EmptyFileError):
+            return jsonify({'error': 'No text content found'}), 422
+        if isinstance(exc, CorruptedFileError):
+            return jsonify({'error': 'Could not read this file'}), 422
         return jsonify({'error': 'Failed to parse file'}), 422
 
     from app.services.parse_confidence import compute_parse_confidence
