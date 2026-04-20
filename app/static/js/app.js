@@ -154,7 +154,7 @@
                     text-indent: -1em;
                 }
                 #resumePage .rv-bullets li::before {
-                    content: "\u2022";
+                    content: "${{'filled': '\u2022', 'open': '\u25e6', 'dash': '\u2013', 'none': ''}[t.bullet_style || 'filled']}";
                     display: inline-block;
                     width: 1em;
                 }
@@ -518,6 +518,7 @@
             date_format: 'MMM YYYY',
             header_layout: 'centered',
             contact_separator: 'pipe',
+            bullet_style: 'filled',
         };
     }
 
@@ -1990,6 +1991,16 @@
         });
     }
 
+    var typoBulletStyleEl = document.getElementById('typoBulletStyle');
+    if (typoBulletStyleEl) {
+        typoBulletStyleEl.value = state.typo.bullet_style || 'filled';
+        typoBulletStyleEl.addEventListener('change', function () {
+            pushHistory();
+            state.typo.bullet_style = typoBulletStyleEl.value;
+            notifyChange();
+        });
+    }
+
     var typoSizeNameSlider = document.getElementById('typoSizeName');
     var typoSizeNameNum = document.getElementById('typoSizeNameNum');
     if (typoSizeNameSlider && typoSizeNameNum) {
@@ -2163,6 +2174,9 @@
                 btn.classList.toggle('active', btn.dataset.layout === typo.skills_layout);
             });
         }
+
+        var bulletStyleEl = document.getElementById('typoBulletStyle');
+        if (bulletStyleEl) bulletStyleEl.value = typo.bullet_style || 'filled';
 
         var sizeNameSlider = document.getElementById('typoSizeName');
         var sizeNameNum = document.getElementById('typoSizeNameNum');
