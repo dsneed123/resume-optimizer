@@ -14,6 +14,7 @@ from app.services.ats_optimizer import (
     _check_skills_present,
     _check_experience_bullets,
     _check_section_headings,
+    _check_date_consistency,
 )
 
 
@@ -448,3 +449,164 @@ def test_suggest_improvements_long_bullets():
     data["experience"][0]["bullets"] = ["x" * 250]
     suggestions = suggest_improvements(data)
     assert any("bullet" in s.lower() or "long" in s.lower() for s in suggestions)
+
+
+# --- _check_date_consistency ---
+
+def test_date_consistency_valid_resume_passes():
+    passed, issues = _check_date_consistency(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_date_consistency_future_start_date_fails():
+    data = _full_resume()
+    data["experience"][0]["start_date"] = "January 2099"
+    data["experience"][0]["end_date"] = "Present"
+    passed, issues = _check_date_consistency(data)
+    assert not passed
+    assert any("future" in i.lower() for i in issues)
+
+
+def test_date_consistency_future_end_date_fails():
+    data = _full_resume()
+    data["experience"][0]["start_date"] = "January 2020"
+    data["experience"][0]["end_date"] = "December 2099"
+    passed, issues = _check_date_consistency(data)
+    assert not passed
+    assert any("future" in i.lower() for i in issues)
+
+
+def test_date_consistency_end_before_start_fails():
+    data = _full_resume()
+    data["experience"][0]["start_date"] = "January 2020"
+    data["experience"][0]["end_date"] = "June 2019"
+    passed, issues = _check_date_consistency(data)
+    assert not passed
+    assert any("before start" in i.lower() for i in issues)
+
+
+def test_date_consistency_overlapping_experiences_fails():
+    data = _full_resume()
+    data["experience"] = [
+        {
+            "company": "Acme Corp",
+            "title": "Engineer",
+            "location": "",
+            "start_date": "January 2018",
+            "end_date": "June 2021",
+            "bullets": ["Did stuff."],
+        },
+        {
+            "company": "Beta Inc",
+            "title": "Engineer",
+            "location": "",
+            "start_date": "March 2020",
+            "end_date": "December 2022",
+            "bullets": ["Did more stuff."],
+        },
+    ]
+    passed, issues = _check_date_consistency(data)
+    assert not passed
+    assert any("overlap" in i.lower() for i in issues)
+
+
+def test_date_consistency_gap_over_six_months_fails():
+    data = _full_resume()
+    data["experience"] = [
+        {
+            "company": "Acme Corp",
+            "title": "Engineer",
+            "location": "",
+            "start_date": "January 2018",
+            "end_date": "January 2019",
+            "bullets": ["Did stuff."],
+        },
+        {
+            "company": "Beta Inc",
+            "title": "Engineer",
+            "location": "",
+            "start_date": "October 2019",
+            "end_date": "December 2022",
+            "bullets": ["Did more stuff."],
+        },
+    ]
+    passed, issues = _check_date_consistency(data)
+    assert not passed
+    assert any("gap" in i.lower() for i in issues)
+
+
+def test_date_consistency_gap_under_six_months_passes():
+    data = _full_resume()
+    data["experience"] = [
+        {
+            "company": "Acme Corp",
+            "title": "Engineer",
+            "location": "",
+            "start_date": "January 2018",
+            "end_date": "January 2019",
+            "bullets": ["Did stuff."],
+        },
+        {
+            "company": "Beta Inc",
+            "title": "Engineer",
+            "location": "",
+            "start_date": "April 2019",
+            "end_date": "December 2022",
+            "bullets": ["Did more stuff."],
+        },
+    ]
+    passed, issues = _check_date_consistency(data)
+    assert passed
+    assert issues == []
+
+
+def test_date_consistency_future_graduation_without_expected_fails():
+    data = _full_resume()
+    data["education"][0]["graduation_date"] = "May 2099"
+    passed, issues = _check_date_consistency(data)
+    assert not passed
+    assert any("future" in i.lower() or "expected" in i.lower() for i in issues)
+
+
+def test_date_consistency_future_graduation_with_expected_passes():
+    data = _full_resume()
+    data["education"][0]["graduation_date"] = "Expected May 2099"
+    passed, issues = _check_date_consistency(data)
+    assert passed
+    assert issues == []
+
+
+def test_date_consistency_present_end_date_not_future():
+    data = _full_resume()
+    data["experience"][0]["end_date"] = "Present"
+    passed, issues = _check_date_consistency(data)
+    assert passed
+    assert issues == []
+
+
+def test_date_consistency_penalty_three_per_issue():
+    data = _full_resume()
+    # Two issues: future start date + future end date on same entry
+    data["experience"] = [
+        {
+            "company": "Future Corp",
+            "title": "Engineer",
+            "location": "",
+            "start_date": "January 2090",
+            "end_date": "December 2095",
+            "bullets": ["Future work."],
+        }
+    ]
+    result = analyze_ats_score(data)
+    # Two date consistency issues (-6) + missing bullets check passes (has bullets)
+    base = analyze_ats_score(_full_resume())["score"]
+    assert result["score"] == base - 6
+
+
+def test_date_consistency_no_dates_passes():
+    data = _full_resume()
+    data["experience"][0]["start_date"] = ""
+    data["experience"][0]["end_date"] = ""
+    passed, issues = _check_date_consistency(data)
+    assert passed
