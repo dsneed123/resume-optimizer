@@ -21,6 +21,7 @@ from app.services.docx_import import (
     _fallback_resume,
     _is_bullet,
     _HEADER_MARKER,
+    _extract_degree_and_field,
 )
 
 docx_required = pytest.mark.skipif(
@@ -189,6 +190,53 @@ def test_parse_education_block():
     assert len(entries) >= 1
     assert entries[0]["school"] == "State University"
     assert entries[0]["gpa"] == "3.8"
+
+
+def test_parse_education_block_degree_and_field_combined():
+    lines = ["MIT  B.S. in Computer Science  May 2021"]
+    entries = _parse_education_block(lines)
+    assert entries[0]["school"] == "MIT"
+    assert entries[0]["degree"] == "B.S."
+    assert entries[0]["field"] == "Computer Science"
+    assert entries[0]["graduation_date"] == "May 2021"
+
+
+def test_parse_education_block_expected_date():
+    lines = ["State University  B.A. in Economics  Expected May 2025"]
+    entries = _parse_education_block(lines)
+    assert entries[0]["school"] == "State University"
+    assert entries[0]["degree"] == "B.A."
+    assert entries[0]["field"] == "Economics"
+    assert entries[0]["graduation_date"] == "Expected May 2025"
+
+
+def test_parse_education_block_full_degree_name():
+    lines = ["Stanford University, Bachelor of Science in Computer Science, May 2020"]
+    entries = _parse_education_block(lines)
+    assert entries[0]["school"] == "Stanford University"
+    assert "Bachelor" in entries[0]["degree"]
+    assert entries[0]["field"] == "Computer Science"
+
+
+def test_parse_education_block_phd():
+    lines = ["MIT  PhD  Computer Science  2018-2023"]
+    entries = _parse_education_block(lines)
+    assert entries[0]["school"] == "MIT"
+    assert entries[0]["degree"] == "PhD"
+    assert entries[0]["field"] == "Computer Science"
+
+
+def test_extract_degree_and_field_abbreviations():
+    assert _extract_degree_and_field("B.S. in Computer Science") == ("B.S.", "Computer Science")
+    assert _extract_degree_and_field("MBA") == ("MBA", "")
+    assert _extract_degree_and_field("Ph.D. in Physics") == ("Ph.D.", "Physics")
+    assert _extract_degree_and_field("M.S. in Data Science") == ("M.S.", "Data Science")
+
+
+def test_extract_degree_and_field_no_match():
+    degree, field = _extract_degree_and_field("Computer Science")
+    assert degree == "Computer Science"
+    assert field == ""
 
 
 def test_parse_certifications_block():

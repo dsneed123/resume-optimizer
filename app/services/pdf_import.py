@@ -61,14 +61,34 @@ _SECTION_HEADERS = {
 }
 
 _DATE_RANGE = re.compile(
-    # Month+Year with optional range: Jan 2020, Jan 2020 - Present, January 2020 to March 2023
-    r'(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}'
+    # Month+Year with optional "Expected" prefix and optional range
+    r'(?:expected\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}'
     r'(?:\s*(?:[-–—]|\bto\b)\s*'
     r'(?:(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+)?\d{4}|present|current))?'
     # Year-only range: 2020-2023, 2020 to Present (separator required to avoid matching stray years)
     r'|\d{4}\s*(?:[-–—]|\bto\b)\s*(?:\d{4}|present|current)',
     re.IGNORECASE,
 )
+
+_DEGREE_RE = re.compile(
+    r'^(?P<degree>'
+    r'Ph\.?D\.?|J\.?D\.?|M\.?D\.?'                                    # Doctoral
+    r'|M\.?B\.?A\.?|M\.?P\.?H\.?|M\.?Eng?\.?|M\.?Ed?\.?'             # Master's (multi-letter)
+    r'|M\.?S\.?|M\.?A\.?'                                              # M.S., M.A.
+    r'|B\.?F\.?A\.?|B\.?Eng?\.?|B\.?S\.?C?\.?|B\.?A\.?'              # Bachelor's
+    r'|A\.?S\.?|A\.?A\.?'                                              # Associate's
+    r'|(?:Bachelor|Master|Doctor|Associate)(?:\s+of\s+\w+(?:\s+(?!in\b)\w+){0,3})?'  # Full names
+    r')(?=[\s,]|$)'
+    r'(?:[\s,]+in\s+(?P<field>.+))?$',
+    re.IGNORECASE,
+)
+
+
+def _extract_degree_and_field(text: str) -> tuple[str, str]:
+    m = _DEGREE_RE.match(text.strip())
+    if m:
+        return m.group('degree').strip(), (m.group('field') or '').strip()
+    return text.strip(), ''
 
 _EMAIL = re.compile(r'[\w.+-]+@[\w-]+\.[a-z]{2,}', re.IGNORECASE)
 _PHONE = re.compile(r'(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}')
@@ -224,9 +244,12 @@ def _parse_education_block(lines: list[str]) -> list[dict]:
                 if segments:
                     current["school"] = segments[0]
                 if len(segments) > 1:
-                    current["degree"] = segments[1]
-                if len(segments) > 2:
-                    current["field"] = segments[2]
+                    degree, field = _extract_degree_and_field(segments[1])
+                    current["degree"] = degree
+                    if field:
+                        current["field"] = field
+                    elif len(segments) > 2:
+                        current["field"] = ' '.join(segments[2:])
         else:
             gpa_match = re.search(r'gpa[:\s]+(\d+\.\d+)', stripped, re.IGNORECASE)
             honors_match = re.search(r'(cum laude|magna cum laude|summa cum laude|honors?)', stripped, re.IGNORECASE)
@@ -235,7 +258,10 @@ def _parse_education_block(lines: list[str]) -> list[dict]:
             elif honors_match:
                 current["honors"] = honors_match.group(1)
             elif not current["degree"]:
-                current["degree"] = stripped
+                degree, field = _extract_degree_and_field(stripped)
+                current["degree"] = degree
+                if field and not current["field"]:
+                    current["field"] = field
             elif not current["field"]:
                 current["field"] = stripped
 
