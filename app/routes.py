@@ -173,6 +173,28 @@ def _classify_suggestion(message: str, index: int) -> dict:
     return {'message': message, 'section': section, 'priority': priority}
 
 
+@bp.route('/api/resume/<resume_id>/auto-fit', methods=['POST'])
+def auto_fit_resume(resume_id):
+    try:
+        data, typography = load_resume(resume_id)
+    except FileNotFoundError:
+        return jsonify({'error': 'Resume not found'}), 404
+
+    from app.services.page_fit import _render_page_count, auto_fit, fits_one_page
+
+    adjusted = auto_fit(data, typography)
+
+    try:
+        page_count = _render_page_count(data, adjusted)
+        fits = page_count <= 1
+    except Exception:
+        fits = fits_one_page(data, adjusted)
+        page_count = 1 if fits else 2
+
+    save_resume(resume_id, data, adjusted)
+    return jsonify({'typography': adjusted, 'fits': fits, 'page_count': page_count})
+
+
 @bp.route('/api/resume/<resume_id>', methods=['DELETE'])
 def remove_resume(resume_id):
     try:
