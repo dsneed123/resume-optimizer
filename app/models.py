@@ -159,6 +159,7 @@ class TypographySettings:
     date_format: str = "MMM YYYY"
     header_layout: str = "centered"
     contact_separator: str = "pipe"
+    section_divider_style: str = "thin"
 
 
 def default_typography() -> dict:
@@ -179,6 +180,7 @@ def default_typography() -> dict:
         "date_format": "MMM YYYY",
         "header_layout": "centered",
         "contact_separator": "pipe",
+        "section_divider_style": "thin",
     }
 
 

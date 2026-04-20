@@ -57,7 +57,14 @@
 
   .header-rule {
     border: none;
+    {% if typography.section_divider_style == 'thick' %}
+    border-top: 2.5pt solid #000;
+    {% elif typography.section_divider_style == 'double' %}
+    border-top: 3pt double #000;
+    {% elif typography.section_divider_style == 'none' %}
+    {% else %}
     border-top: 1pt solid #000;
+    {% endif %}
     margin-top: 5pt;
     margin-bottom: {{ typography.section_spacing }}pt;
   }
@@ -72,7 +79,14 @@
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.5pt;
+    {% if typography.section_divider_style == 'thick' %}
+    border-bottom: 2pt solid #000;
+    {% elif typography.section_divider_style == 'double' %}
+    border-bottom: 3pt double #000;
+    {% elif typography.section_divider_style == 'none' %}
+    {% else %}
     border-bottom: 0.5pt solid #000;
+    {% endif %}
     padding-bottom: 1pt;
     margin-bottom: 4pt;
   }

@@ -28,13 +28,22 @@ def _set_paragraph_spacing(para, space_before_pt: float, space_after_pt: float, 
     fmt.line_spacing = line_height
 
 
-def _add_horizontal_rule(para):
+def _add_horizontal_rule(para, style: str = "thin"):
     """Insert a bottom border on a paragraph to simulate a section divider."""
+    if style == "none":
+        return
     pPr = para._p.get_or_add_pPr()
     pBdr = OxmlElement("w:pBdr")
     bottom = OxmlElement("w:bottom")
-    bottom.set(qn("w:val"), "single")
-    bottom.set(qn("w:sz"), "6")
+    if style == "thick":
+        bottom.set(qn("w:val"), "thick")
+        bottom.set(qn("w:sz"), "18")
+    elif style == "double":
+        bottom.set(qn("w:val"), "double")
+        bottom.set(qn("w:sz"), "6")
+    else:
+        bottom.set(qn("w:val"), "single")
+        bottom.set(qn("w:sz"), "6")
     bottom.set(qn("w:space"), "1")
     bottom.set(qn("w:color"), "000000")
     pBdr.append(bottom)
@@ -52,11 +61,11 @@ def _add_run(para, text: str, font_name: str, font_size: float, bold=False, ital
     return run
 
 
-def _add_section_header(doc, title: str, font_name: str, font_size: float, section_spacing: float):
+def _add_section_header(doc, title: str, font_name: str, font_size: float, section_spacing: float, divider_style: str = "thin"):
     para = doc.add_paragraph()
     _set_paragraph_spacing(para, section_spacing, 2, 1.0)
     _add_run(para, title.upper(), font_name, font_size, bold=True)
-    _add_horizontal_rule(para)
+    _add_horizontal_rule(para, divider_style)
     return para
 
 
@@ -75,6 +84,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     margin_bottom = float(t.get("margin_bottom", 0.5))
     margin_left = float(t.get("margin_left", 0.6))
     margin_right = float(t.get("margin_right", 0.6))
+    divider_style = t.get("section_divider_style", "thin")
 
     doc = Document()
 
@@ -112,7 +122,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     # --- Summary ---
     summary = resume_data.get("summary")
     if summary:
-        _add_section_header(doc, "Summary", font_name, size_header, section_spacing)
+        _add_section_header(doc, "Summary", font_name, size_header, section_spacing, divider_style)
         para = doc.add_paragraph()
         _set_paragraph_spacing(para, 2, para_spacing, line_height)
         _add_run(para, summary, font_name, size_body)
@@ -120,7 +130,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     # --- Experience ---
     experience = resume_data.get("experience", [])
     if experience:
-        _add_section_header(doc, "Experience", font_name, size_header, section_spacing)
+        _add_section_header(doc, "Experience", font_name, size_header, section_spacing, divider_style)
         for exp in experience:
             if not isinstance(exp, dict):
                 continue
@@ -155,7 +165,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     # --- Education ---
     education = resume_data.get("education", [])
     if education:
-        _add_section_header(doc, "Education", font_name, size_header, section_spacing)
+        _add_section_header(doc, "Education", font_name, size_header, section_spacing, divider_style)
         for edu in education:
             if not isinstance(edu, dict):
                 continue
@@ -189,7 +199,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     # --- Skills ---
     skills = resume_data.get("skills", [])
     if skills:
-        _add_section_header(doc, "Skills", font_name, size_header, section_spacing)
+        _add_section_header(doc, "Skills", font_name, size_header, section_spacing, divider_style)
         for skill in skills:
             if not isinstance(skill, dict):
                 continue
@@ -206,7 +216,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     # --- Certifications ---
     certifications = resume_data.get("certifications", [])
     if certifications:
-        _add_section_header(doc, "Certifications", font_name, size_header, section_spacing)
+        _add_section_header(doc, "Certifications", font_name, size_header, section_spacing, divider_style)
         for cert in certifications:
             if not isinstance(cert, dict):
                 continue
@@ -224,7 +234,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     # --- Projects ---
     projects = resume_data.get("projects", [])
     if projects:
-        _add_section_header(doc, "Projects", font_name, size_header, section_spacing)
+        _add_section_header(doc, "Projects", font_name, size_header, section_spacing, divider_style)
         for proj in projects:
             if not isinstance(proj, dict):
                 continue
@@ -250,7 +260,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     # --- Awards ---
     awards = resume_data.get("awards", [])
     if awards:
-        _add_section_header(doc, "Awards", font_name, size_header, section_spacing)
+        _add_section_header(doc, "Awards", font_name, size_header, section_spacing, divider_style)
         for award in awards:
             if not isinstance(award, dict):
                 continue
