@@ -9,6 +9,7 @@ except ImportError:
 
 from app.services.pdf_import import (
     import_pdf,
+    import_text,
     _classify_section,
     _extract_header_fields,
     _parse_skills_block,
@@ -19,13 +20,18 @@ from app.services.pdf_import import (
     _parse_resume_text,
     _fallback_resume,
     _is_header_footer_line,
+    _is_bullet,
     _words_to_lines,
     _detect_two_columns,
     _HEADER_MARKER,
+    _DATE_RANGE,
     _group_words_by_line,
     _get_median_font_size,
     _line_is_bold_or_large,
     _extract_degree_and_field,
+    EmptyFileError,
+    CorruptedFileError,
+    PasswordProtectedError,
 )
 
 pdfplumber_required = pytest.mark.skipif(
@@ -470,15 +476,290 @@ def test_detect_two_columns_empty():
 
 
 @pdfplumber_required
-def test_import_pdf_bad_bytes_returns_fallback():
-    result = import_pdf(b"not a pdf")
+def test_import_pdf_bad_bytes_raises_corrupted():
+    with pytest.raises(CorruptedFileError):
+        import_pdf(b"not a pdf")
+
+
+@pdfplumber_required
+def test_import_pdf_empty_bytes_raises_empty():
+    with pytest.raises(EmptyFileError):
+        import_pdf(b"")
+
+
+# --- Unit tests for _is_bullet ---
+
+def test_is_bullet_bullet_char():
+    assert _is_bullet("• Python")
+    assert _is_bullet("  • indented")
+
+
+def test_is_bullet_dash():
+    assert _is_bullet("- item")
+    assert _is_bullet("– item")
+    assert _is_bullet("— item")
+
+
+def test_is_bullet_asterisk_and_other_markers():
+    assert _is_bullet("* item")
+    assert _is_bullet("▪ item")
+    assert _is_bullet("◦ item")
+    assert _is_bullet("‣ item")
+    assert _is_bullet("⁃ item")
+
+
+def test_is_bullet_not_bullet():
+    assert not _is_bullet("Plain text")
+    assert not _is_bullet("2020-2023")
+    assert not _is_bullet("-no space after dash")
+    assert not _is_bullet("")
+
+
+# --- Unit tests for _DATE_RANGE ---
+
+def test_date_range_month_year():
+    assert _DATE_RANGE.search("Jan 2020")
+    assert _DATE_RANGE.search("December 2019")
+    assert _DATE_RANGE.search("Feb 2022")
+
+
+def test_date_range_month_year_range_to_present():
+    m = _DATE_RANGE.search("Jan 2020 - Present")
+    assert m is not None
+    assert "Jan 2020" in m.group()
+    assert "Present" in m.group()
+
+
+def test_date_range_month_year_to_month_year():
+    m = _DATE_RANGE.search("March 2018 to June 2021")
+    assert m is not None
+
+
+def test_date_range_year_only_range():
+    m = _DATE_RANGE.search("2019-2022")
+    assert m is not None
+    assert "2019" in m.group()
+    assert "2022" in m.group()
+
+
+def test_date_range_year_to_present():
+    m = _DATE_RANGE.search("2020 to Present")
+    assert m is not None
+
+
+def test_date_range_expected_prefix():
+    m = _DATE_RANGE.search("Expected May 2025")
+    assert m is not None
+
+
+def test_date_range_no_match():
+    assert _DATE_RANGE.search("John Smith") is None
+    assert _DATE_RANGE.search("Software Engineer") is None
+    assert _DATE_RANGE.search("") is None
+
+
+# --- Unit tests for _parse_projects_block ---
+
+def test_parse_projects_block_basic():
+    lines = [
+        "Resume Optimizer",
+        "• Built a web app to optimize resumes using NLP",
+        "• Deployed on AWS",
+    ]
+    projects = _parse_projects_block(lines)
+    assert len(projects) == 1
+    assert projects[0]["name"] == "Resume Optimizer"
+    assert "NLP" in projects[0]["description"]
+
+
+def test_parse_projects_block_with_tech():
+    lines = [
+        "My Project",
+        "• A cool project",
+        "Tech: Python, Flask, PostgreSQL",
+    ]
+    projects = _parse_projects_block(lines)
+    assert len(projects) == 1
+    assert "Python" in projects[0]["technologies"]
+
+
+def test_parse_projects_block_multiple():
+    lines = [
+        "Project Alpha",
+        "• Description of alpha",
+        "",
+        "Project Beta",
+        "• Description of beta",
+    ]
+    projects = _parse_projects_block(lines)
+    assert len(projects) == 2
+    assert projects[0]["name"] == "Project Alpha"
+    assert projects[1]["name"] == "Project Beta"
+
+
+# --- Unit tests for import_text ---
+
+def test_import_text_full_resume():
+    text = """Jane Doe
+jane@example.com
+555-987-6543
+
+SUMMARY
+Experienced data engineer.
+
+EXPERIENCE
+Data Engineer  Acme Corp  Jan 2021 - Present
+• Built ETL pipelines
+
+SKILLS
+Languages: Python, SQL
+"""
+    result = import_text(text)
+    assert result["header"]["name"] == "Jane Doe"
+    assert result["header"]["email"] == "jane@example.com"
+    assert len(result["experience"]) >= 1
+    assert len(result["skills"]) >= 1
+
+
+def test_import_text_empty_returns_fallback():
+    result = import_text("")
+    assert isinstance(result, dict)
+    assert result["experience"] == []
+
+
+def test_import_text_whitespace_only_returns_fallback():
+    result = import_text("   \n  ")
+    assert isinstance(result, dict)
+    assert result["experience"] == []
+
+
+# --- Integration tests: import_pdf() with a real PDF ---
+
+def _make_simple_pdf_bytes(lines: list[str]) -> bytes:
+    """Build a minimal single-page PDF with given text lines (Type1/Helvetica)."""
+    ops = []
+    y = 720
+    for line in lines:
+        safe = (
+            line.replace("\\", "\\\\")
+                .replace("(", "\\(")
+                .replace(")", "\\)")
+                .replace("\r", "")
+        )
+        ops.append(f"BT /F1 10 Tf 50 {y} Td ({safe}) Tj ET")
+        y -= 14
+        if y < 50:
+            break
+    stream = ("\n".join(ops) + "\n").encode("latin-1", errors="replace")
+
+    buf = io.BytesIO()
+
+    def w(s):
+        buf.write(s.encode() if isinstance(s, str) else s)
+
+    offsets: dict[int, int] = {}
+
+    w(b"%PDF-1.4\n")
+
+    offsets[1] = buf.tell()
+    w("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
+
+    offsets[2] = buf.tell()
+    w("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
+
+    offsets[3] = buf.tell()
+    w(
+        "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]"
+        " /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n"
+    )
+
+    offsets[4] = buf.tell()
+    w(f"4 0 obj\n<< /Length {len(stream)} >>\nstream\n")
+    w(stream)
+    w("\nendstream\nendobj\n")
+
+    offsets[5] = buf.tell()
+    w("5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
+
+    xref_pos = buf.tell()
+    n = 6
+    w(f"xref\n0 {n}\n")
+    w("0000000000 65535 f \n")
+    for i in range(1, n):
+        w(f"{offsets[i]:010d} 00000 n \n")
+
+    w(f"trailer\n<< /Size {n} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n")
+
+    return buf.getvalue()
+
+
+@pdfplumber_required
+def test_import_pdf_extracts_text_from_sample_pdf():
+    pdf = _make_simple_pdf_bytes(["John Smith", "john@example.com", "Software Engineer"])
+    result = import_pdf(pdf)
     assert isinstance(result, dict)
     assert "header" in result
     assert "experience" in result
 
 
 @pdfplumber_required
-def test_import_pdf_empty_bytes_returns_fallback():
-    result = import_pdf(b"")
+def test_import_pdf_detects_section_headers():
+    pdf = _make_simple_pdf_bytes([
+        "Alice Brown",
+        "alice@example.com",
+        "EXPERIENCE",
+        "Engineer  Acme  Jan 2020 - Present",
+        "EDUCATION",
+        "State University  B.S.  May 2018",
+        "SKILLS",
+        "Python, Go",
+    ])
+    result = import_pdf(pdf)
     assert isinstance(result, dict)
-    assert result["experience"] == []
+    assert len(result["experience"]) >= 1
+    assert len(result["education"]) >= 1
+    assert len(result["skills"]) >= 1
+
+
+@pdfplumber_required
+def test_import_pdf_parses_bullet_points():
+    pdf = _make_simple_pdf_bytes([
+        "Bob Lee",
+        "bob@example.com",
+        "EXPERIENCE",
+        "Engineer  WidgetCo  2021-2023",
+        "- Built REST APIs",
+        "- Improved test coverage",
+    ])
+    result = import_pdf(pdf)
+    exp = result.get("experience", [])
+    assert len(exp) >= 1
+    all_bullets = [b for e in exp for b in e.get("bullets", [])]
+    assert len(all_bullets) >= 1
+
+
+@pdfplumber_required
+def test_import_pdf_parses_date_ranges():
+    pdf = _make_simple_pdf_bytes([
+        "Carol Kim",
+        "carol@example.com",
+        "EXPERIENCE",
+        "Senior Engineer  TechCorp  Jan 2019 - Dec 2022",
+        "- Led backend team",
+    ])
+    result = import_pdf(pdf)
+    exp = result.get("experience", [])
+    assert len(exp) >= 1
+    assert exp[0]["start_date"] != "" or exp[0]["end_date"] != ""
+
+
+@pdfplumber_required
+def test_import_pdf_invalid_bytes_raises_corrupted():
+    with pytest.raises(CorruptedFileError):
+        import_pdf(b"%PDF-1.4 broken content here that is not a real pdf object")
+
+
+@pdfplumber_required
+def test_import_pdf_empty_bytes_raises_empty_file_error():
+    with pytest.raises(EmptyFileError):
+        import_pdf(b"")
