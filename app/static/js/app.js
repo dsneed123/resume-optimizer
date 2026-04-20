@@ -2691,8 +2691,33 @@
     var importCancelBtn = document.getElementById('importCancelBtn');
     var importModalClose = document.getElementById('importModalClose');
     var importBtn       = document.getElementById('importBtn');
+    var importTabFile   = document.getElementById('importTabFile');
+    var importTabText   = document.getElementById('importTabText');
+    var importPanelFile = document.getElementById('importPanelFile');
+    var importPanelText = document.getElementById('importPanelText');
+    var importTextarea  = document.getElementById('importTextarea');
 
     var selectedFile = null;
+    var importActiveTab = 'file';
+
+    function switchImportTab(tab) {
+        importActiveTab = tab;
+        var isFile = tab === 'file';
+        if (importTabFile) {
+            importTabFile.classList.toggle('import-tab--active', isFile);
+            importTabFile.setAttribute('aria-selected', isFile ? 'true' : 'false');
+        }
+        if (importTabText) {
+            importTabText.classList.toggle('import-tab--active', !isFile);
+            importTabText.setAttribute('aria-selected', isFile ? 'false' : 'true');
+        }
+        if (importPanelFile) importPanelFile.hidden = !isFile;
+        if (importPanelText) importPanelText.hidden = isFile;
+        if (importError) importError.hidden = true;
+        if (importConfirmBtn) {
+            importConfirmBtn.disabled = isFile ? !selectedFile : !(importTextarea && importTextarea.value.trim());
+        }
+    }
 
     function openImportModal() {
         resetImportModal();
@@ -2705,12 +2730,24 @@
 
     function resetImportModal() {
         selectedFile = null;
+        importActiveTab = 'file';
         if (importFileInput) importFileInput.value = '';
         if (importFileInfo) importFileInfo.hidden = true;
         if (importError) importError.hidden = true;
         if (importConfirmBtn) importConfirmBtn.disabled = true;
         if (importSpinner) importSpinner.hidden = true;
         if (importDropzone) importDropzone.classList.remove('drag-over');
+        if (importTextarea) importTextarea.value = '';
+        if (importTabFile) {
+            importTabFile.classList.add('import-tab--active');
+            importTabFile.setAttribute('aria-selected', 'true');
+        }
+        if (importTabText) {
+            importTabText.classList.remove('import-tab--active');
+            importTabText.setAttribute('aria-selected', 'false');
+        }
+        if (importPanelFile) importPanelFile.hidden = false;
+        if (importPanelText) importPanelText.hidden = true;
     }
 
     function formatBytes(bytes) {
@@ -2781,6 +2818,22 @@
         notifyChange();
     }
 
+    if (importTabFile) {
+        importTabFile.addEventListener('click', function () { switchImportTab('file'); });
+    }
+
+    if (importTabText) {
+        importTabText.addEventListener('click', function () { switchImportTab('text'); });
+    }
+
+    if (importTextarea) {
+        importTextarea.addEventListener('input', function () {
+            if (importActiveTab === 'text' && importConfirmBtn) {
+                importConfirmBtn.disabled = !importTextarea.value.trim();
+            }
+        });
+    }
+
     if (importBtn) {
         importBtn.addEventListener('click', openImportModal);
     }
@@ -2847,16 +2900,35 @@
 
     if (importConfirmBtn) {
         importConfirmBtn.addEventListener('click', function () {
-            if (!selectedFile) return;
-
             importConfirmBtn.disabled = true;
             if (importSpinner) importSpinner.hidden = false;
             if (importError) importError.hidden = true;
 
-            var formData = new FormData();
-            formData.append('file', selectedFile);
+            var fetchPromise;
+            if (importActiveTab === 'text') {
+                var text = importTextarea ? importTextarea.value : '';
+                if (!text.trim()) {
+                    importConfirmBtn.disabled = false;
+                    if (importSpinner) importSpinner.hidden = true;
+                    return;
+                }
+                fetchPromise = fetch('/api/import/text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text }),
+                });
+            } else {
+                if (!selectedFile) {
+                    importConfirmBtn.disabled = false;
+                    if (importSpinner) importSpinner.hidden = true;
+                    return;
+                }
+                var formData = new FormData();
+                formData.append('file', selectedFile);
+                fetchPromise = fetch('/api/import', { method: 'POST', body: formData });
+            }
 
-            fetch('/api/import', { method: 'POST', body: formData })
+            fetchPromise
                 .then(function (r) {
                     return r.json().then(function (body) {
                         return { ok: r.ok, status: r.status, body: body };

@@ -514,6 +514,15 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     return "\n".join(page_texts)
 
 
+def import_text(text: str) -> dict:
+    if not text or not text.strip():
+        return _fallback_resume("")
+    try:
+        return _parse_resume_text(text)
+    except Exception:
+        return _fallback_resume(text)
+
+
 def import_pdf(file_bytes: bytes) -> dict:
     try:
         full_text = _extract_text_from_pdf(file_bytes)
