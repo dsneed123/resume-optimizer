@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 from app.models import default_resume, default_typography
 
@@ -17,7 +18,7 @@ def _resume_path(resume_id: str) -> str:
     return os.path.join(_resumes_dir(), f'{resume_id}.json')
 
 
-def save_resume(resume_id: str, data: dict, typography: dict, resume_name: str | None = None) -> None:
+def save_resume(resume_id: str, data: dict, typography: dict, resume_name: Optional[str] = None) -> None:
     path = _resume_path(resume_id)
     now = datetime.now(timezone.utc).isoformat()
     created_at = now

@@ -23,6 +23,12 @@ def test_create_new_resume_returns_id(ctx):
     assert isinstance(resume_id, str) and len(resume_id) == 36
 
 
+def test_create_new_resume_generates_unique_ids(ctx):
+    id1 = storage.create_new_resume()
+    id2 = storage.create_new_resume()
+    assert id1 != id2
+
+
 def test_save_and_load_roundtrip(ctx):
     data = default_resume()
     data['header']['name'] = 'Alice'
