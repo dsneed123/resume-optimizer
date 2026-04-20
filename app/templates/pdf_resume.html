@@ -165,6 +165,33 @@
     font-weight: bold;
   }
 
+  {% if typography.skills_layout == 'columns' %}
+  .skills-grid {
+    column-count: 2;
+    column-gap: 12pt;
+  }
+  .skill-col {
+    break-inside: avoid;
+    margin-bottom: 2pt;
+  }
+  {% elif typography.skills_layout == 'tags' %}
+  .skill-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 3pt;
+    margin-bottom: 4pt;
+  }
+  .skill-tag {
+    display: inline-block;
+    border: 0.5pt solid #888;
+    border-radius: 3pt;
+    padding: 0.5pt 4pt;
+    font-size: {{ typography.font_size_detail }}pt;
+    line-height: 1.4;
+  }
+  {% endif %}
+
   /* ── Certifications / Awards ── */
   .cert-entry {
     margin-bottom: {{ typography.paragraph_spacing }}pt;
@@ -270,10 +297,22 @@
     <div class="skills-grid">
       {% for skill in data.skills %}
       {% if skill.category or skill.items %}
+      {% if typography.skills_layout == 'columns' %}
+      <div class="skill-col">
+        {% if skill.category %}<div class="skill-category">{{ skill.category }}</div>{% endif %}
+        {% for item in skill.items %}<div>{{ item }}</div>{% endfor %}
+      </div>
+      {% elif typography.skills_layout == 'tags' %}
+      <div class="skill-row">
+        {% if skill.category %}<span class="skill-category">{{ skill.category }}:</span> {% endif %}
+        {% for item in skill.items %}<span class="skill-tag">{{ item }}</span>{% endfor %}
+      </div>
+      {% else %}
       <div class="skill-row">
         {% if skill.category %}<span class="skill-category">{{ skill.category }}:</span> {% endif %}
         {{ skill.items | join(', ') }}
       </div>
+      {% endif %}
       {% endif %}
       {% endfor %}
     </div>
