@@ -224,6 +224,27 @@ def check_page(resume_id):
     return jsonify({'fits': fits, 'page_count': page_count, 'content_height_pct': content_height_pct})
 
 
+@bp.route('/api/resume/auto-fit', methods=['POST'])
+def auto_fit_inline():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
+    data = body.get('data')
+    typography = body.get('typography')
+    if data is None or typography is None:
+        return jsonify({'error': 'Body must include "data" and "typography"'}), 400
+
+    from app.services.page_fit import auto_fit, compute_changes, fits_one_page
+
+    if fits_one_page(data, typography):
+        return jsonify({'typography': typography, 'fits': True, 'changes': []})
+
+    adjusted = auto_fit(data, typography)
+    fits = fits_one_page(data, adjusted)
+    changes = compute_changes(typography, adjusted)
+    return jsonify({'typography': adjusted, 'fits': fits, 'changes': changes})
+
+
 @bp.route('/api/resume/<resume_id>/auto-fit', methods=['POST'])
 def auto_fit_resume(resume_id):
     try:
@@ -231,9 +252,10 @@ def auto_fit_resume(resume_id):
     except FileNotFoundError:
         return jsonify({'error': 'Resume not found'}), 404
 
-    from app.services.page_fit import _render_page_count, auto_fit, fits_one_page
+    from app.services.page_fit import _render_page_count, auto_fit, compute_changes, fits_one_page
 
     adjusted = auto_fit(data, typography)
+    changes = compute_changes(typography, adjusted)
 
     try:
         page_count = _render_page_count(data, adjusted)
@@ -243,7 +265,7 @@ def auto_fit_resume(resume_id):
         page_count = 1 if fits else 2
 
     save_resume(resume_id, data, adjusted)
-    return jsonify({'typography': adjusted, 'fits': fits, 'page_count': page_count})
+    return jsonify({'typography': adjusted, 'fits': fits, 'page_count': page_count, 'changes': changes})
 
 
 @bp.route('/api/resume/<resume_id>', methods=['DELETE'])
