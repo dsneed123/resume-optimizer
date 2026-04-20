@@ -814,6 +814,7 @@
     var saveTimer = null;
     var lastSavedSnapshot = null;
     var saveStatusEl = document.getElementById('saveStatus');
+    var saveSpinnerEl = document.getElementById('saveSpinner');
 
     function setSaveStatus(status) {
         if (!saveStatusEl) return;
@@ -821,14 +822,18 @@
         if (status === 'saving') {
             saveStatusEl.classList.add('saving');
             saveStatusEl.textContent = 'Saving...';
+            if (saveSpinnerEl) saveSpinnerEl.hidden = false;
         } else if (status === 'saved') {
             saveStatusEl.classList.add('saved');
             saveStatusEl.textContent = 'Saved';
+            if (saveSpinnerEl) saveSpinnerEl.hidden = true;
         } else if (status === 'error') {
             saveStatusEl.classList.add('error');
             saveStatusEl.textContent = 'Error saving';
+            if (saveSpinnerEl) saveSpinnerEl.hidden = true;
         } else {
             saveStatusEl.textContent = '';
+            if (saveSpinnerEl) saveSpinnerEl.hidden = true;
         }
     }
 
@@ -3461,6 +3466,7 @@
 
     function fetchAtsScore() {
         if (refreshAtsBtnEl) refreshAtsBtnEl.disabled = true;
+        if (atsGaugeWrapEl) atsGaugeWrapEl.classList.add('ats-loading');
         fetch('/api/resume/ats-score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3468,10 +3474,12 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (result) {
+            if (atsGaugeWrapEl) atsGaugeWrapEl.classList.remove('ats-loading');
             renderAtsScore(result);
             if (refreshAtsBtnEl) refreshAtsBtnEl.disabled = false;
         })
         .catch(function () {
+            if (atsGaugeWrapEl) atsGaugeWrapEl.classList.remove('ats-loading');
             if (refreshAtsBtnEl) refreshAtsBtnEl.disabled = false;
         });
     }
@@ -3724,4 +3732,7 @@
 
     initSectionCollapsibility();
     initResumeId();
+
+    var appEl = document.getElementById('app');
+    if (appEl) appEl.classList.remove('app-loading');
 })();
