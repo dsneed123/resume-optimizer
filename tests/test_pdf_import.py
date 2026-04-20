@@ -21,6 +21,10 @@ from app.services.pdf_import import (
     _is_header_footer_line,
     _words_to_lines,
     _detect_two_columns,
+    _HEADER_MARKER,
+    _group_words_by_line,
+    _get_median_font_size,
+    _line_is_bold_or_large,
 )
 
 pdfplumber_required = pytest.mark.skipif(
@@ -48,6 +52,107 @@ def test_classify_section_skills():
 def test_classify_section_none():
     assert _classify_section("John Smith") is None
     assert _classify_section("") is None
+
+
+def test_classify_section_trailing_colon():
+    assert _classify_section("Experience:") == "experience"
+    assert _classify_section("Education:") == "education"
+    assert _classify_section("Skills:") == "skills"
+    assert _classify_section("SUMMARY:") == "summary"
+
+
+def test_classify_section_professional_experience():
+    assert _classify_section("PROFESSIONAL EXPERIENCE") == "experience"
+    assert _classify_section("Professional Experience") == "experience"
+    assert _classify_section("Relevant Experience") == "experience"
+    assert _classify_section("Technical Experience") == "experience"
+
+
+def test_classify_section_work_history():
+    assert _classify_section("Work History") == "experience"
+    assert _classify_section("WORK HISTORY") == "experience"
+    assert _classify_section("Employment History") == "experience"
+    assert _classify_section("Career History") == "experience"
+
+
+def test_classify_section_career_summary_and_objective():
+    assert _classify_section("Career Summary") == "summary"
+    assert _classify_section("Career Objective") == "summary"
+    assert _classify_section("Objective") == "summary"
+    assert _classify_section("Executive Summary") == "summary"
+    assert _classify_section("Professional Profile") == "summary"
+
+
+def test_classify_section_skills_variants():
+    assert _classify_section("Core Skills") == "skills"
+    assert _classify_section("Key Skills") == "skills"
+    assert _classify_section("Technologies") == "skills"
+    assert _classify_section("Core Competencies") == "skills"
+
+
+def test_classify_section_certifications_variants():
+    assert _classify_section("Certifications") == "certifications"
+    assert _classify_section("Certification") == "certifications"
+    assert _classify_section("Licenses & Certifications") == "certifications"
+    assert _classify_section("Credentials") == "certifications"
+
+
+def test_classify_section_awards_variants():
+    assert _classify_section("Honors") == "awards"
+    assert _classify_section("Achievements") == "awards"
+    assert _classify_section("Accomplishments") == "awards"
+    assert _classify_section("Awards & Honors") == "awards"
+
+
+def test_classify_section_header_marker():
+    assert _classify_section(f"{_HEADER_MARKER}SKILLS") == "skills"
+    assert _classify_section(f"{_HEADER_MARKER}Experience") == "experience"
+    assert _classify_section(f"{_HEADER_MARKER}EDUCATION") == "education"
+
+
+def test_group_words_by_line_sorts_left_to_right():
+    words = [
+        {"text": "World", "top": 10.0, "x0": 50.0, "x1": 90.0},
+        {"text": "Hello", "top": 10.0, "x0": 5.0, "x1": 45.0},
+    ]
+    groups = _group_words_by_line(words)
+    assert len(groups) == 1
+    assert [w["text"] for w in groups[0]] == ["Hello", "World"]
+
+
+def test_get_median_font_size():
+    chars = [{"size": 10.0}, {"size": 12.0}, {"size": 14.0}, {"size": 0}]
+    assert _get_median_font_size(chars) == 12.0
+
+
+def test_get_median_font_size_empty():
+    assert _get_median_font_size([]) == 0.0
+
+
+def test_line_is_bold_or_large_bold_font():
+    chars_by_top = {
+        10: [{"text": "E", "fontname": "Arial-Bold", "size": 10.0, "top": 10.0},
+             {"text": "X", "fontname": "Arial-Bold", "size": 10.0, "top": 10.0}]
+    }
+    assert _line_is_bold_or_large(10.0, chars_by_top, median_size=10.0) is True
+
+
+def test_line_is_bold_or_large_larger_font():
+    chars_by_top = {
+        10: [{"text": "S", "fontname": "Arial", "size": 14.0, "top": 10.0}]
+    }
+    assert _line_is_bold_or_large(10.0, chars_by_top, median_size=10.0) is True
+
+
+def test_line_is_bold_or_large_normal_font():
+    chars_by_top = {
+        10: [{"text": "a", "fontname": "Arial", "size": 10.0, "top": 10.0}]
+    }
+    assert _line_is_bold_or_large(10.0, chars_by_top, median_size=10.0) is False
+
+
+def test_line_is_bold_or_large_no_chars():
+    assert _line_is_bold_or_large(10.0, {}, median_size=10.0) is False
 
 
 def test_extract_header_fields_basic():

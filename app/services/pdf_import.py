@@ -10,17 +10,54 @@ _LIGATURE_MAP = str.maketrans({
 
 _PAGE_NUMBER = re.compile(r'^\s*(?:page\s+)?\d+(?:\s+of\s+\d+)?\s*$', re.IGNORECASE)
 
+# Prefix added by _extract_text_from_pdf to lines detected as headers by font formatting
+_HEADER_MARKER = '\x02'
+
 _SECTION_HEADERS = {
     'experience': re.compile(
-        r'^(work\s+)?experience|employment(\s+history)?|professional\s+background$',
+        r'(?:work\s+|professional\s+|relevant\s+|technical\s+|recent\s+)?experience'
+        r'|(?:work|employment|career)\s+history'
+        r'|employment(?:\s+history)?'
+        r'|professional\s+background',
         re.IGNORECASE,
     ),
-    'education': re.compile(r'^education(\s+&\s+training)?|academic\s+background$', re.IGNORECASE),
-    'skills': re.compile(r'^(technical\s+)?skills?|core\s+competencies|technologies$', re.IGNORECASE),
-    'certifications': re.compile(r'^certifications?|licenses?\s*(&\s*certifications?)?$', re.IGNORECASE),
-    'projects': re.compile(r'^projects?|personal\s+projects?|side\s+projects?$', re.IGNORECASE),
-    'awards': re.compile(r'^awards?(\s+&\s+honors?)?|honors?|achievements?$', re.IGNORECASE),
-    'summary': re.compile(r'^(professional\s+)?summary|objective|profile|about(\s+me)?$', re.IGNORECASE),
+    'education': re.compile(
+        r'education(?:\s+(?:&\s+training|history|background))?'
+        r'|academic\s+(?:background|history|credentials)',
+        re.IGNORECASE,
+    ),
+    'skills': re.compile(
+        r'(?:technical\s+|core\s+|key\s+)?skills?'
+        r'|core\s+competencies'
+        r'|technologies?(?:\s+(?:&\s+)?tools?)?'
+        r'|tools?\s+(?:&\s+)?technologies?',
+        re.IGNORECASE,
+    ),
+    'certifications': re.compile(
+        r'certifications?(?:\s+(?:&\s+)?licenses?)?'
+        r'|licenses?(?:\s+(?:&\s+)?certifications?)?'
+        r'|credentials',
+        re.IGNORECASE,
+    ),
+    'projects': re.compile(
+        r'(?:personal\s+|side\s+|notable\s+|key\s+|open[\s-]source\s+)?projects?'
+        r'|portfolio',
+        re.IGNORECASE,
+    ),
+    'awards': re.compile(
+        r'awards?(?:\s+(?:&\s+)?honors?)?'
+        r'|honors?(?:\s+(?:&\s+)?awards?)?'
+        r'|achievements?'
+        r'|accomplishments?'
+        r'|recognitions?',
+        re.IGNORECASE,
+    ),
+    'summary': re.compile(
+        r'(?:professional\s+|career\s+|executive\s+)?(?:summary|profile|overview|statement)'
+        r'|(?:career\s+)?objective'
+        r'|about(?:\s+me)?',
+        re.IGNORECASE,
+    ),
 }
 
 _DATE_RANGE = re.compile(
@@ -36,8 +73,14 @@ _URL = re.compile(r'(?:https?://|www\.|linkedin\.com/in/)\S+', re.IGNORECASE)
 
 def _classify_section(line: str) -> Optional[str]:
     stripped = line.strip()
+    if stripped.startswith(_HEADER_MARKER):
+        stripped = stripped[len(_HEADER_MARKER):].strip()
+    # Strip trailing colon or period common in some resume formats
+    normalized = stripped.rstrip(':.')
+    if not normalized:
+        return None
     for section, pattern in _SECTION_HEADERS.items():
-        if pattern.fullmatch(stripped):
+        if pattern.fullmatch(normalized):
             return section
     return None
 
@@ -287,8 +330,8 @@ def _is_header_footer_line(line: str) -> bool:
     return bool(_PAGE_NUMBER.match(line))
 
 
-def _words_to_lines(words: list[dict]) -> list[str]:
-    """Group pdfplumber word dicts into text lines, sorted top-to-bottom then left-to-right."""
+def _group_words_by_line(words: list[dict]) -> list[list[dict]]:
+    """Group pdfplumber word dicts into lines by y-position, each line sorted left-to-right."""
     if not words:
         return []
     line_groups: list[list[dict]] = []
@@ -301,7 +344,39 @@ def _words_to_lines(words: list[dict]) -> list[str]:
                 break
         if not placed:
             line_groups.append([word])
-    return [" ".join(w['text'] for w in sorted(g, key=lambda w: w['x0'])) for g in line_groups]
+    return [sorted(g, key=lambda w: w['x0']) for g in line_groups]
+
+
+def _words_to_lines(words: list[dict]) -> list[str]:
+    """Group pdfplumber word dicts into text lines, sorted top-to-bottom then left-to-right."""
+    return [" ".join(w['text'] for w in g) for g in _group_words_by_line(words)]
+
+
+def _get_median_font_size(chars: list[dict]) -> float:
+    sizes = sorted(c['size'] for c in chars if c.get('size', 0) > 0)
+    if not sizes:
+        return 0.0
+    return sizes[len(sizes) // 2]
+
+
+def _line_is_bold_or_large(line_top: float, chars_by_top: dict, median_size: float, tolerance: float = 5.0) -> bool:
+    """Return True if chars at line_top are predominantly bold or larger than median font size."""
+    low, high = int(line_top - tolerance), int(line_top + tolerance) + 1
+    text_chars = [
+        c for k in range(low, high)
+        for c in chars_by_top.get(k, [])
+        if c.get('text', '').strip()
+    ]
+    if not text_chars:
+        return False
+    bold_count = sum(
+        1 for c in text_chars
+        if any(w in c.get('fontname', '').lower() for w in ('bold', 'heavy', 'black', 'demi'))
+    )
+    if bold_count / len(text_chars) > 0.5:
+        return True
+    avg_size = sum(c.get('size', 0) for c in text_chars) / len(text_chars)
+    return median_size > 0 and avg_size > median_size * 1.2
 
 
 def _detect_two_columns(words: list[dict], page_w: float) -> bool:
@@ -340,17 +415,33 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
             if not words:
                 continue
 
+            # Pre-compute font metadata for formatting-based header detection
+            chars = page.chars
+            median_size = _get_median_font_size(chars) if chars else 0.0
+            chars_by_top: dict[int, list[dict]] = {}
+            if chars:
+                for c in chars:
+                    chars_by_top.setdefault(int(c.get('top', 0)), []).append(c)
+
             if _detect_two_columns(words, page_w):
                 mid_x = page_w / 2
                 left = [w for w in words if (w['x0'] + w['x1']) / 2 < mid_x]
                 right = [w for w in words if (w['x0'] + w['x1']) / 2 >= mid_x]
-                lines = _words_to_lines(left) + _words_to_lines(right)
+                groups = _group_words_by_line(left) + _group_words_by_line(right)
             else:
-                lines = _words_to_lines(words)
+                groups = _group_words_by_line(words)
 
-            lines = [l for l in lines if not _is_header_footer_line(l)]
-            if lines:
-                page_texts.append("\n".join(lines).translate(_LIGATURE_MAP))
+            result_lines = []
+            for group in groups:
+                line_text = " ".join(w['text'] for w in group)
+                if _is_header_footer_line(line_text):
+                    continue
+                if chars_by_top and _line_is_bold_or_large(group[0]['top'], chars_by_top, median_size):
+                    line_text = _HEADER_MARKER + line_text
+                result_lines.append(line_text)
+
+            if result_lines:
+                page_texts.append("\n".join(result_lines).translate(_LIGATURE_MAP))
 
     return "\n".join(page_texts)
 
