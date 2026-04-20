@@ -16,6 +16,7 @@ from app.services.ats_optimizer import (
     _check_bullet_quality,
     _check_section_headings,
     _check_date_consistency,
+    _check_skills_analysis,
 )
 
 
@@ -722,3 +723,106 @@ def test_bullet_quality_short_bullet_no_pileup():
     assert not passed
     short_issues = [i for i in issues if "short" in i.lower()]
     assert len(short_issues) == 1
+
+
+# --- _check_skills_analysis ---
+
+def test_skills_analysis_perfect_resume_passes():
+    passed, issues = _check_skills_analysis(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_skills_analysis_no_skills_defers():
+    # Missing skills handled by _check_skills_present; analysis should not double-penalize
+    data = _full_resume()
+    data["skills"] = []
+    passed, issues = _check_skills_analysis(data)
+    assert passed
+    assert issues == []
+
+
+def test_skills_analysis_empty_items_defers():
+    data = _full_resume()
+    data["skills"] = [{"category": "Tech", "items": []}]
+    passed, issues = _check_skills_analysis(data)
+    assert passed
+    assert issues == []
+
+
+def test_skills_analysis_fewer_than_five_flagged():
+    data = _full_resume()
+    data["skills"] = [{"category": "Languages", "items": ["Python", "Go"]}]
+    passed, issues = _check_skills_analysis(data)
+    assert not passed
+    assert any("2" in i and "skill" in i.lower() for i in issues)
+
+
+def test_skills_analysis_exactly_five_passes():
+    data = _full_resume()
+    data["skills"] = [{"category": "Languages", "items": ["Python", "Go", "SQL", "JS", "Bash"]}]
+    passed, issues = _check_skills_analysis(data)
+    assert passed
+    assert issues == []
+
+
+def test_skills_analysis_one_skill_flagged():
+    data = _full_resume()
+    data["skills"] = [{"category": "Languages", "items": ["Python"]}]
+    passed, issues = _check_skills_analysis(data)
+    assert not passed
+    assert any("1" in i and "skill" in i.lower() for i in issues)
+
+
+def test_skills_analysis_over_ten_one_category_flagged():
+    data = _full_resume()
+    data["skills"] = [
+        {"category": "Tech", "items": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]}
+    ]
+    passed, issues = _check_skills_analysis(data)
+    assert not passed
+    assert any("categor" in i.lower() for i in issues)
+
+
+def test_skills_analysis_over_ten_multiple_categories_passes():
+    data = _full_resume()
+    data["skills"] = [
+        {"category": "Languages", "items": ["Python", "Go", "SQL", "JS", "Bash", "Ruby"]},
+        {"category": "Frameworks", "items": ["Django", "React", "FastAPI", "Flask", "Rails"]},
+    ]
+    passed, issues = _check_skills_analysis(data)
+    assert passed
+    assert issues == []
+
+
+def test_skills_analysis_over_ten_no_category_name_flagged():
+    data = _full_resume()
+    data["skills"] = [
+        {"category": "", "items": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]}
+    ]
+    passed, issues = _check_skills_analysis(data)
+    assert not passed
+    assert any("categor" in i.lower() for i in issues)
+
+
+def test_skills_analysis_penalty_five_per_issue():
+    data = _full_resume()
+    data["skills"] = [{"category": "Languages", "items": ["Python", "Go"]}]
+    result = analyze_ats_score(data)
+    base = analyze_ats_score(_full_resume())["score"]
+    assert result["score"] == base - 5
+
+
+def test_skills_analysis_both_issues_penalty_ten():
+    # < 5 skills AND > 10 uncategorized can't both be true at same time; verify just one fires
+    data = _full_resume()
+    data["skills"] = [{"category": "Languages", "items": ["Python"]}]
+    passed, issues = _check_skills_analysis(data)
+    assert not passed
+    assert len(issues) == 1  # only "too few" fires; can't have > 10 and < 5 simultaneously
+
+
+def test_skills_analysis_non_list_skills_passes():
+    passed, issues = _check_skills_analysis({"skills": "not a list"})
+    assert passed
+    assert issues == []
