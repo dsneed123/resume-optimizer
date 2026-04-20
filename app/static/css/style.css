@@ -1995,3 +1995,52 @@ body {
     color: #c0392b;
     border-color: #e8b4b4;
 }
+
+/* ── Print styles ─────────────────────────────── */
+@media print {
+    @page {
+        size: letter;
+        margin: 0.75in;
+    }
+
+    .toolbar,
+    .sidebar,
+    .sidebar-overlay,
+    .zoom-controls,
+    .page-fill-indicator {
+        display: none !important;
+    }
+
+    body, #app {
+        background: #fff;
+        height: auto;
+        overflow: visible;
+    }
+
+    .workspace {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+
+    .preview {
+        display: block;
+        padding: 0;
+        overflow: visible;
+        background: #fff;
+        height: auto;
+    }
+
+    .page-wrap {
+        box-shadow: none;
+        border-radius: 0;
+        transform: none !important;
+    }
+
+    .page {
+        width: 100%;
+        min-height: auto;
+        padding: 0;
+        border-radius: 0;
+    }
+}

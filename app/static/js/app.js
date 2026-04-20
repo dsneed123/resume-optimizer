@@ -2860,6 +2860,11 @@
         exportDocxBtn.addEventListener('click', function () { doExport('docx'); });
     }
 
+    var printBtn = document.getElementById('printBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function () { window.print(); });
+    }
+
     document.addEventListener('click', function (e) {
         if (exportDropdown && !exportDropdown.contains(e.target)) {
             closeExportMenu();
@@ -2924,7 +2929,7 @@
 
         if (e.key === 'p' || e.key === 'P') {
             e.preventDefault();
-            doExport('pdf');
+            window.print();
             return;
         }
     });
