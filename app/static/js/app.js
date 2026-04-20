@@ -275,6 +275,9 @@
             const d = this.data;
             if (!d) return;
 
+            // Preserve the fill indicator element across innerHTML rewrites
+            const indicator = document.getElementById('pageFillIndicator');
+
             // Header always first
             const h = d.header || {};
             let html = '<div class="rv-header">';
@@ -312,10 +315,12 @@
 
             if (!hasContent) {
                 this.page.innerHTML = '<p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>';
+                if (indicator) this.page.appendChild(indicator);
                 return;
             }
 
             this.page.innerHTML = html;
+            if (indicator) this.page.appendChild(indicator);
         }
     }
 
@@ -380,6 +385,7 @@
 
     function notifyChange() {
         preview.update(state.data, state.typo);
+        schedulePageCheck();
     }
 
     // ── Sidebar nav (dynamic, ordered by section_order) ─────────────────
@@ -1666,4 +1672,42 @@
             notifyChange();
         });
     });
+
+    // ── Page fill indicator ──────────────────────
+    var pageFillTimer = null;
+    var pageFillIndicatorEl = document.getElementById('pageFillIndicator');
+    var pageFillBarEl = document.getElementById('pageFillBar');
+    var pageFillPctEl = document.getElementById('pageFillPct');
+
+    function updatePageFillIndicator(pct) {
+        if (!pageFillBarEl || !pageFillPctEl || !pageFillIndicatorEl) return;
+        var clamped = Math.min(pct, 100);
+        pageFillBarEl.style.height = clamped + '%';
+        pageFillPctEl.textContent = Math.round(pct) + '%';
+        pageFillBarEl.className = 'page-fill-bar';
+        if (pct >= 100) {
+            pageFillBarEl.classList.add('page-fill-bar--red');
+        } else if (pct >= 90) {
+            pageFillBarEl.classList.add('page-fill-bar--yellow');
+        }
+        pageFillIndicatorEl.classList.add('has-data');
+    }
+
+    function schedulePageCheck() {
+        clearTimeout(pageFillTimer);
+        pageFillTimer = setTimeout(function () {
+            fetch('/api/resume/page-check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: state.data, typography: state.typo })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (typeof result.content_height_pct === 'number') {
+                    updatePageFillIndicator(result.content_height_pct);
+                }
+            })
+            .catch(function () {});
+        }, 300);
+    }
 })();
