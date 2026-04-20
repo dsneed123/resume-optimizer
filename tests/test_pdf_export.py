@@ -1,3 +1,5 @@
+import io
+
 import pytest
 
 from app.services.font_config import build_font_face_css, get_css_family
@@ -111,6 +113,53 @@ def test_export_pdf_calibri_font(ctx):
     typo['font_family'] = 'Calibri'
     pdf = export_pdf(data, typo)
     assert pdf[:4] == b'%PDF'
+
+
+@weasyprint_required
+def test_export_pdf_contains_resume_text(ctx):
+    from pypdf import PdfReader
+
+    data = default_resume()
+    data['header']['name'] = 'Alice Wonderland'
+    data['header']['email'] = 'alice@example.com'
+    data['header']['phone'] = '555-9999'
+    data['summary'] = 'Passionate software developer.'
+    pdf = export_pdf(data, default_typography())
+    reader = PdfReader(io.BytesIO(pdf))
+    text = ''.join(page.extract_text() or '' for page in reader.pages)
+    assert 'Alice Wonderland' in text
+    assert 'alice@example.com' in text
+
+
+@weasyprint_required
+def test_export_pdf_is_one_page(ctx):
+    from pypdf import PdfReader
+
+    data = default_resume()
+    data['header']['name'] = 'Single Page Test'
+    data['header']['email'] = 'single@example.com'
+    pdf = export_pdf(data, default_typography())
+    reader = PdfReader(io.BytesIO(pdf))
+    assert len(reader.pages) == 1
+
+
+@weasyprint_required
+def test_export_pdf_typography_affects_output(ctx):
+    data = default_resume()
+    data['header']['name'] = 'Typography Test'
+    data['header']['email'] = 'typo@example.com'
+
+    typo_small = default_typography()
+    typo_small['font_size_body'] = 8
+    typo_small['margin_top'] = 0.5
+
+    typo_large = default_typography()
+    typo_large['font_size_body'] = 14
+    typo_large['margin_top'] = 1.5
+
+    pdf_small = export_pdf(data, typo_small)
+    pdf_large = export_pdf(data, typo_large)
+    assert pdf_small != pdf_large
 
 
 def test_build_font_face_css_garamond():
