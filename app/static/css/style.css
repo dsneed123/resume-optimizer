@@ -378,6 +378,61 @@ body {
     position: relative;
 }
 
+/* Top-level sidebar tabs */
+.sidebar-tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg-sidebar);
+}
+
+.sidebar-tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 11px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.sidebar-tab-btn:hover {
+    color: var(--text);
+}
+
+.sidebar-tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* Tab panes */
+.sidebar-tab-pane {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.sidebar-tab-pane.active {
+    display: flex;
+}
+
+/* ATS tab pane: two sections stacked, pane scrolls */
+#tabPane-ats {
+    overflow-y: auto;
+}
+
+#tabPane-ats .sidebar-section {
+    flex: 0 0 auto;
+    overflow-y: visible;
+}
+
 /* Section tab nav */
 .sidebar-nav {
     display: flex;

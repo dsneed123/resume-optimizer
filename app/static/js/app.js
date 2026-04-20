@@ -703,6 +703,36 @@
     };
 
     var LS_COLLAPSED_KEY = 'ro_collapsed_sections';
+    var LS_ACTIVE_TAB_KEY = 'ro_active_tab';
+
+    function activateTab(tabName) {
+        var tabBtns = document.querySelectorAll('.sidebar-tab-btn');
+        var tabPanes = document.querySelectorAll('.sidebar-tab-pane');
+        tabBtns.forEach(function (btn) {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+        tabPanes.forEach(function (pane) {
+            pane.classList.toggle('active', pane.id === 'tabPane-' + tabName);
+        });
+        try { localStorage.setItem(LS_ACTIVE_TAB_KEY, tabName); } catch (e) {}
+    }
+
+    function initSidebarTabs() {
+        var savedTab = 'content';
+        try { savedTab = localStorage.getItem(LS_ACTIVE_TAB_KEY) || 'content'; } catch (e) {}
+        activateTab(savedTab);
+
+        var tabBar = document.getElementById('sidebarTabBar');
+        if (tabBar) {
+            tabBar.addEventListener('click', function (e) {
+                var btn = e.target.closest('.sidebar-tab-btn');
+                if (!btn) return;
+                activateTab(btn.dataset.tab);
+            });
+        }
+    }
+
+    initSidebarTabs();
 
     function loadCollapsedSections() {
         try { return JSON.parse(localStorage.getItem(LS_COLLAPSED_KEY) || '{}'); }
@@ -1283,8 +1313,8 @@
         var activeBtn = nav.querySelector('.sidebar-nav-btn.active');
         var activeSection = activeBtn ? activeBtn.dataset.section : 'header';
 
-        // Remove all non-contact, non-typography, non-ats, non-job-match buttons
-        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"]):not([data-section="typography"]):not([data-section="ats"]):not([data-section="job-match"])')).forEach(function (b) {
+        // Remove all non-header section buttons (Typography/ATS/Job Match moved to top-level tabs)
+        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"])')).forEach(function (b) {
             nav.removeChild(b);
         });
 
@@ -1292,9 +1322,6 @@
         var existingAddBtn = nav.querySelector('.add-custom-section-nav');
         if (existingAddBtn) existingAddBtn.remove();
 
-        // Add buttons in section_order order, each with a drag handle
-        // Insert before the Typography button so it stays last
-        var typoNavBtn = nav.querySelector('.sidebar-nav-btn[data-section="typography"]');
         var order = state.data.section_order || DEFAULT_SECTION_ORDER;
         order.forEach(function (key) {
             var meta = getSectionMeta(key);
@@ -1314,23 +1341,15 @@
                 '<button class="nav-eye-btn" title="' + (isVisible ? 'Hide section' : 'Show section') + '" aria-label="' + (isVisible ? 'Hide section' : 'Show section') + '">' +
                 (isVisible ? EYE_OPEN_SVG : EYE_CLOSED_SVG) +
                 '</button>';
-            if (typoNavBtn) {
-                nav.insertBefore(btn, typoNavBtn);
-            } else {
-                nav.appendChild(btn);
-            }
+            nav.appendChild(btn);
         });
 
-        // Add "Add Custom Section" button before Typography
+        // Add "Add Custom Section" button at end of nav
         var addCustomBtn = document.createElement('button');
         addCustomBtn.className = 'add-custom-section-nav';
         addCustomBtn.textContent = '+ Add Custom Section';
         addCustomBtn.addEventListener('click', addCustomSection);
-        if (typoNavBtn) {
-            nav.insertBefore(addCustomBtn, typoNavBtn);
-        } else {
-            nav.appendChild(addCustomBtn);
-        }
+        nav.appendChild(addCustomBtn);
 
         updateSectionPanelVisibility();
 
@@ -1367,8 +1386,9 @@
                     }
                     return;
                 }
-                // Query allSections fresh to include dynamically added custom section panels
-                var allSections = document.querySelectorAll('.sidebar-section');
+                // Query only content-pane sections (typography/ATS panes manage their own state)
+                var contentPane = document.getElementById('tabPane-content');
+                var allSections = contentPane ? contentPane.querySelectorAll('.sidebar-section') : document.querySelectorAll('.sidebar-section');
                 allNavBtns.forEach(function (b) { b.classList.remove('active'); });
                 allSections.forEach(function (s) { s.classList.remove('active'); });
                 btn.classList.add('active');
