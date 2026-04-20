@@ -13,6 +13,7 @@ from app.services.ats_optimizer import (
     _check_summary_present,
     _check_skills_present,
     _check_experience_bullets,
+    _check_bullet_quality,
     _check_section_headings,
     _check_date_consistency,
 )
@@ -595,11 +596,11 @@ def test_date_consistency_penalty_three_per_issue():
             "location": "",
             "start_date": "January 2090",
             "end_date": "December 2095",
-            "bullets": ["Future work."],
+            "bullets": ["Led migration of 5 legacy systems to microservices, cutting latency by 40%."],
         }
     ]
     result = analyze_ats_score(data)
-    # Two date consistency issues (-6) + missing bullets check passes (has bullets)
+    # Two date consistency issues → -6
     base = analyze_ats_score(_full_resume())["score"]
     assert result["score"] == base - 6
 
@@ -610,3 +611,114 @@ def test_date_consistency_no_dates_passes():
     data["experience"][0]["end_date"] = ""
     passed, issues = _check_date_consistency(data)
     assert passed
+
+
+# --- _check_bullet_quality ---
+
+def test_bullet_quality_perfect_resume_passes():
+    passed, issues = _check_bullet_quality(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_bullet_quality_short_bullet_flagged():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = ["Did stuff."]
+    passed, issues = _check_bullet_quality(data)
+    assert not passed
+    assert any("short" in i.lower() for i in issues)
+
+
+def test_bullet_quality_four_words_flagged():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = ["Led the big team"]
+    passed, issues = _check_bullet_quality(data)
+    assert not passed
+    assert any("short" in i.lower() for i in issues)
+
+
+def test_bullet_quality_five_words_not_short():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = ["Led the backend migration effort by 30%."]
+    passed, issues = _check_bullet_quality(data)
+    assert not any("short" in i.lower() for i in issues)
+
+
+def test_bullet_quality_long_bullet_flagged():
+    data = _full_resume()
+    long_bullet = (
+        "Led the migration of a large legacy monolithic backend system to a "
+        "modern microservices architecture resulting in a significant reduction "
+        "in latency by 40 percent overall."
+    )
+    assert len(long_bullet.split()) > 25
+    data["experience"][0]["bullets"] = [long_bullet]
+    passed, issues = _check_bullet_quality(data)
+    assert not passed
+    assert any("long" in i.lower() or "split" in i.lower() for i in issues)
+
+
+def test_bullet_quality_no_action_verb_flagged():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = [
+        "Responsible for 5 backend systems and 3 microservices deployments."
+    ]
+    passed, issues = _check_bullet_quality(data)
+    assert not passed
+    assert any("action verb" in i.lower() for i in issues)
+
+
+def test_bullet_quality_no_metric_flagged():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = [
+        "Led migration of the monolith to microservices architecture."
+    ]
+    passed, issues = _check_bullet_quality(data)
+    assert not passed
+    assert any("quantif" in i.lower() or "number" in i.lower() for i in issues)
+
+
+def test_bullet_quality_with_percentage_passes_metric():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = [
+        "Reduced deployment time by 40% through pipeline automation."
+    ]
+    passed, issues = _check_bullet_quality(data)
+    assert not any("quantif" in i.lower() for i in issues)
+
+
+def test_bullet_quality_empty_bullets_skipped():
+    data = _full_resume()
+    data["experience"][0]["bullets"] = ["", "   "]
+    passed, issues = _check_bullet_quality(data)
+    assert passed
+    assert issues == []
+
+
+def test_bullet_quality_no_experience_passes():
+    data = _full_resume()
+    data["experience"] = []
+    passed, issues = _check_bullet_quality(data)
+    assert passed
+    assert issues == []
+
+
+def test_bullet_quality_penalty_two_per_issue():
+    data = _full_resume()
+    # One bullet with no metric → 1 issue → -2
+    data["experience"][0]["bullets"] = [
+        "Led migration of the monolith to microservices architecture.",
+        "Mentored team of 5 engineers across two product squads.",
+    ]
+    result = analyze_ats_score(data)
+    assert result["score"] == 98  # -2 for one weak bullet (no metric)
+
+
+def test_bullet_quality_short_bullet_no_pileup():
+    data = _full_resume()
+    # Short bullet should only generate one issue (short), not pile on action verb / metric flags
+    data["experience"][0]["bullets"] = ["Did stuff.", "Mentored team of 5 engineers."]
+    passed, issues = _check_bullet_quality(data)
+    assert not passed
+    short_issues = [i for i in issues if "short" in i.lower()]
+    assert len(short_issues) == 1
