@@ -1053,13 +1053,61 @@
         return { company: '', title: '', location: '', start_date: '', end_date: '', present: false, bullets: [] };
     }
 
+    var VERB_CATEGORIES = [
+        { label: 'Leadership',  verbs: ['Led', 'Directed', 'Managed', 'Oversaw'] },
+        { label: 'Achievement', verbs: ['Achieved', 'Increased', 'Reduced', 'Improved'] },
+        { label: 'Technical',   verbs: ['Developed', 'Engineered', 'Implemented', 'Architected'] }
+    ];
+
+    var _ACTION_VERB_SET = new Set([
+        'accelerated', 'achieved', 'administered', 'advanced', 'analyzed',
+        'architected', 'automated', 'built', 'championed', 'collaborated',
+        'communicated', 'completed', 'conducted', 'configured', 'consolidated',
+        'contributed', 'coordinated', 'created', 'cut', 'debugged', 'defined',
+        'delivered', 'deployed', 'designed', 'developed', 'directed', 'drove',
+        'engineered', 'established', 'evaluated', 'executed', 'expanded',
+        'facilitated', 'generated', 'guided', 'identified', 'implemented',
+        'improved', 'increased', 'initiated', 'integrated', 'launched', 'led',
+        'maintained', 'managed', 'mentored', 'migrated', 'modernized', 'monitored',
+        'negotiated', 'optimized', 'orchestrated', 'oversaw', 'owned', 'partnered',
+        'performed', 'planned', 'produced', 'provided', 'reduced', 'refactored',
+        'researched', 'resolved', 'reviewed', 'scaled', 'shipped', 'simplified',
+        'solved', 'spearheaded', 'streamlined', 'supported', 'tested', 'trained',
+        'transformed', 'updated', 'wrote'
+    ]);
+
+    function bulletStartsWithActionVerb(text) {
+        var trimmed = text.trim();
+        if (!trimmed) return true;
+        var firstWord = trimmed.split(/\s+/)[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
+        return _ACTION_VERB_SET.has(firstWord);
+    }
+
+    function buildVerbDropdownHTML() {
+        return '<div class="verb-dropdown" hidden>' +
+            VERB_CATEGORIES.map(function (cat) {
+                return '<div class="verb-dropdown-cat">' +
+                    '<span class="verb-dropdown-cat-label">' + cat.label + '</span>' +
+                    '<div class="verb-chips">' +
+                    cat.verbs.map(function (v) {
+                        return '<button class="verb-chip" type="button" data-verb="' + v + '">' + v + '</button>';
+                    }).join('') +
+                    '</div>' +
+                    '</div>';
+            }).join('') +
+            '</div>';
+    }
+
     function buildBulletHTML(text, bi) {
         return '<div class="bullet-item">' +
             '<div class="bullet-reorder">' +
             '<button class="bullet-up" data-bi="' + bi + '" title="Move up">▲</button>' +
             '<button class="bullet-down" data-bi="' + bi + '" title="Move down">▼</button>' +
             '</div>' +
+            '<div class="bullet-input-wrap">' +
             '<input class="field-input bullet-input" data-bi="' + bi + '" type="text" value="' + escHtml(text) + '" placeholder="Describe an achievement...">' +
+            buildVerbDropdownHTML() +
+            '</div>' +
             '<button class="bullet-remove" data-bi="' + bi + '" title="Remove bullet">✕</button>' +
             '</div>';
     }
@@ -1175,6 +1223,25 @@
                 var bi = parseInt(e.target.dataset.bi);
                 state.data.experience[index].bullets[bi] = e.target.value;
                 notifyChange();
+                var dropdown = e.target.parentElement.querySelector('.verb-dropdown');
+                if (dropdown) dropdown.hidden = bulletStartsWithActionVerb(e.target.value);
+            }
+        });
+
+        bulletList.addEventListener('focusin', function (e) {
+            if (e.target.classList.contains('bullet-input')) {
+                var dropdown = e.target.parentElement.querySelector('.verb-dropdown');
+                if (dropdown) dropdown.hidden = bulletStartsWithActionVerb(e.target.value);
+            }
+        });
+
+        bulletList.addEventListener('focusout', function (e) {
+            if (e.target.classList.contains('bullet-input')) {
+                var wrap = e.target.parentElement;
+                setTimeout(function () {
+                    var dropdown = wrap.querySelector('.verb-dropdown');
+                    if (dropdown) dropdown.hidden = true;
+                }, 150);
             }
         });
 
@@ -1182,10 +1249,22 @@
             var removeBtn = e.target.closest('.bullet-remove');
             var upBtn = e.target.closest('.bullet-up');
             var downBtn = e.target.closest('.bullet-down');
+            var verbChip = e.target.closest('.verb-chip');
             var bullets = state.data.experience[index].bullets;
             var bi, tmp;
 
-            if (removeBtn) {
+            if (verbChip) {
+                var wrap = verbChip.closest('.bullet-input-wrap');
+                var input = wrap.querySelector('.bullet-input');
+                bi = parseInt(input.dataset.bi);
+                var verb = verbChip.dataset.verb;
+                var current = input.value.trim();
+                input.value = verb + (current ? ' ' + current : ' ');
+                bullets[bi] = input.value;
+                wrap.querySelector('.verb-dropdown').hidden = true;
+                input.focus();
+                notifyChange();
+            } else if (removeBtn) {
                 bi = parseInt(removeBtn.dataset.bi);
                 pushHistory();
                 bullets.splice(bi, 1);

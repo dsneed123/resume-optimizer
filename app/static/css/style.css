@@ -914,6 +914,74 @@ body {
     color: var(--accent);
 }
 
+.bullet-input-wrap {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+}
+
+.bullet-input-wrap .bullet-input {
+    width: 100%;
+}
+
+.verb-dropdown {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.verb-dropdown[hidden] {
+    display: none;
+}
+
+.verb-dropdown-cat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.verb-dropdown-cat-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.verb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.verb-chip {
+    background: #f3f4f6;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--text);
+    font-family: inherit;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.verb-chip:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
 /* ── Education item cards ────────────────────── */
 .edu-item {
     border: 1px solid var(--border);
