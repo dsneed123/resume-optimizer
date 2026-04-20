@@ -181,6 +181,37 @@ def suggest_typography_adjustments(resume_data: dict, typography: dict) -> dict:
     return suggested
 
 
+_TYPO_CHANGE_LABELS = {
+    "font_size_body": "body font",
+    "font_size_detail": "detail font",
+    "font_size_section_header": "section header font",
+    "font_size_name": "name font",
+    "line_height": "line height",
+    "paragraph_spacing": "paragraph spacing",
+    "section_spacing": "section spacing",
+    "margin_top": "top margin",
+    "margin_bottom": "bottom margin",
+    "margin_left": "left margin",
+    "margin_right": "right margin",
+}
+
+
+def compute_changes(original: dict, adjusted: dict) -> list:
+    def fmt(v):
+        return str(int(round(v))) if abs(v - round(v)) < 0.001 else str(round(v, 2))
+
+    changes = []
+    for key, label in _TYPO_CHANGE_LABELS.items():
+        orig_val = original.get(key)
+        adj_val = adjusted.get(key)
+        if orig_val is None or adj_val is None:
+            continue
+        if abs(orig_val - adj_val) < 0.001:
+            continue
+        changes.append(f"Reduced {label} from {fmt(orig_val)} to {fmt(adj_val)}")
+    return changes
+
+
 def auto_fit(resume_data: dict, typography: dict) -> dict:
     """
     Iteratively reduce typography settings until the resume fits one page.

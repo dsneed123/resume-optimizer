@@ -1249,3 +1249,56 @@ body {
     line-height: 1;
     white-space: nowrap;
 }
+
+/* Auto-fit button */
+.auto-fit-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+.auto-fit-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.auto-fit-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* Toast notification */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: #1e293b;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 0;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    pointer-events: none;
+    z-index: 9999;
+    max-width: 420px;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.toast.toast--visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

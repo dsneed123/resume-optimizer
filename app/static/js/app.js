@@ -1706,8 +1706,98 @@
                 if (typeof result.content_height_pct === 'number') {
                     updatePageFillIndicator(result.content_height_pct);
                 }
+                if (typeof result.fits === 'boolean') {
+                    updateAutoFitBtnState(result.fits);
+                }
             })
             .catch(function () {});
         }, 300);
+    }
+
+    // ── Auto-fit button ──────────────────────────
+    var autoFitBtn = document.getElementById('autoFitBtn');
+    var autoFitToastEl = document.getElementById('autoFitToast');
+    var autoFitToastTimer = null;
+
+    function updateAutoFitBtnState(fits) {
+        if (autoFitBtn) autoFitBtn.disabled = fits;
+    }
+
+    function showAutoFitToast(message) {
+        if (!autoFitToastEl) return;
+        autoFitToastEl.textContent = message;
+        autoFitToastEl.classList.add('toast--visible');
+        clearTimeout(autoFitToastTimer);
+        autoFitToastTimer = setTimeout(function () {
+            autoFitToastEl.classList.remove('toast--visible');
+        }, 4000);
+    }
+
+    function applyTypoToControls(typo) {
+        Object.assign(state.typo, typo);
+
+        var fontFamilyEl = document.getElementById('typoFontFamily');
+        if (fontFamilyEl) fontFamilyEl.value = typo.font_family;
+
+        var sizeNameSlider = document.getElementById('typoSizeName');
+        var sizeNameNum = document.getElementById('typoSizeNameNum');
+        if (sizeNameSlider) sizeNameSlider.value = typo.font_size_name;
+        if (sizeNameNum) sizeNameNum.value = typo.font_size_name;
+
+        [
+            ['typoSizeSectionHeader', 'typoSizeSectionHeaderVal', 'font_size_section_header', 'pt'],
+            ['typoSizeBody',          'typoSizeBodyVal',          'font_size_body',            'pt'],
+            ['typoSizeDetail',        'typoSizeDetailVal',        'font_size_detail',          'pt'],
+            ['typoLineHeight',        'typoLineHeightVal',        'line_height',               ''],
+            ['typoParagraphSpacing',  'typoParagraphSpacingVal',  'paragraph_spacing',         'pt'],
+            ['typoSectionSpacing',    'typoSectionSpacingVal',    'section_spacing',           'pt'],
+        ].forEach(function (cfg) {
+            var slider = document.getElementById(cfg[0]);
+            var valEl  = document.getElementById(cfg[1]);
+            if (slider) slider.value = typo[cfg[2]];
+            if (valEl)  valEl.textContent = typo[cfg[2]] + cfg[3];
+        });
+
+        [
+            ['typoMarginTop',    'typoMarginTopVal',    'margin_top'],
+            ['typoMarginBottom', 'typoMarginBottomVal', 'margin_bottom'],
+            ['typoMarginLeft',   'typoMarginLeftVal',   'margin_left'],
+            ['typoMarginRight',  'typoMarginRightVal',  'margin_right'],
+        ].forEach(function (cfg) {
+            var slider = document.getElementById(cfg[0]);
+            var valEl  = document.getElementById(cfg[1]);
+            if (slider) slider.value = typo[cfg[2]];
+            if (valEl)  valEl.textContent = typo[cfg[2]].toFixed(2) + 'in';
+        });
+    }
+
+    if (autoFitBtn) {
+        autoFitBtn.addEventListener('click', function () {
+            autoFitBtn.disabled = true;
+            fetch('/api/resume/auto-fit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: state.data, typography: state.typo })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.typography) {
+                    applyTypoToControls(result.typography);
+                    notifyChange();
+                }
+                updateAutoFitBtnState(!!result.fits);
+                var msg;
+                if (!result.changes || result.changes.length === 0) {
+                    msg = 'Already fits one page';
+                } else {
+                    msg = 'Adjusted to fit one page: ' + result.changes.join(', ');
+                }
+                showAutoFitToast(msg);
+            })
+            .catch(function () {
+                autoFitBtn.disabled = false;
+                showAutoFitToast('Auto-fit failed. Please try again.');
+            });
+        });
     }
 })();

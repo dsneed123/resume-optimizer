@@ -169,6 +169,14 @@
                         <h2 class="section-title">Typography</h2>
                     </div>
                     <div class="field-group">
+                        <button class="auto-fit-btn" id="autoFitBtn">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                                <path d="M7 1v3M7 10v3M1 7h3M10 7h3M3.22 3.22l2.12 2.12M8.66 8.66l2.12 2.12M3.22 10.78l2.12-2.12M8.66 5.34l2.12-2.12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            Auto-Fit to One Page
+                        </button>
+                    </div>
+                    <div class="field-group">
                         <label class="field-label" for="typoFontFamily">Font Family</label>
                         <select class="field-input field-select" id="typoFontFamily">
                             <option value="Helvetica">Helvetica</option>
@@ -286,6 +294,8 @@
             </section>
         </main>
     </div>
+
+    <div class="toast" id="autoFitToast" aria-live="polite"></div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
