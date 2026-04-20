@@ -38,6 +38,7 @@ def load_resume(resume_id: str) -> tuple[dict, dict]:
 
 
 def list_resumes() -> list[dict]:
+    from app.services.page_fit import calculate_content_height
     resumes_dir = _resumes_dir()
     results = []
     for filename in os.listdir(resumes_dir):
@@ -47,10 +48,23 @@ def list_resumes() -> list[dict]:
         try:
             with open(path) as f:
                 payload = json.load(f)
+            data = payload.get('data', {})
+            typography = payload.get('typography', {})
+            available_height = (
+                792.0
+                - typography.get('margin_top', 0.5) * 72.0
+                - typography.get('margin_bottom', 0.5) * 72.0
+            )
+            try:
+                content_height = calculate_content_height(data, typography)
+                page_fill_pct = round(content_height / available_height * 100, 1) if available_height > 0 else None
+            except Exception:
+                page_fill_pct = None
             results.append({
                 'id': payload['id'],
-                'name': payload['data'].get('header', {}).get('name', ''),
+                'name': data.get('header', {}).get('name', ''),
                 'updated_at': payload.get('updated_at', ''),
+                'page_fill_pct': page_fill_pct,
             })
         except (KeyError, json.JSONDecodeError):
             continue
