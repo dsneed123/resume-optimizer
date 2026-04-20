@@ -161,6 +161,7 @@ class TypographySettings:
     contact_separator: str = "pipe"
     section_divider_style: str = "thin"
     skills_layout: str = "inline"
+    bullet_style: str = "filled"
 
 
 def default_typography() -> dict:
@@ -183,6 +184,7 @@ def default_typography() -> dict:
         "contact_separator": "pipe",
         "section_divider_style": "thin",
         "skills_layout": "inline",
+        "bullet_style": "filled",
     }
 
 

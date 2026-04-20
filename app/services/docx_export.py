@@ -105,6 +105,7 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
     margin_left = float(t.get("margin_left", 0.6))
     margin_right = float(t.get("margin_right", 0.6))
     divider_style = t.get("section_divider_style", "thin")
+    bullet_style = t.get("bullet_style", "filled")
 
     doc = Document()
 
@@ -175,10 +176,18 @@ def export_docx(resume_data: dict, typography: dict) -> bytes:
                     _set_paragraph_spacing(detail_para, 0, 2, 1.0)
                     _add_run(detail_para, "  |  ".join(date_loc_parts), font_name, size_detail, italic=True)
 
+            _BULLET_CHARS = {"open": "\u25e6 ", "dash": "\u2013 ", "none": ""}
             for bullet in exp.get("bullets", []):
                 if not bullet:
                     continue
-                bul_para = doc.add_paragraph(style="List Bullet")
+                if bullet_style == "filled":
+                    bul_para = doc.add_paragraph(style="List Bullet")
+                else:
+                    bul_para = doc.add_paragraph()
+                    bul_para.paragraph_format.left_indent = Inches(0.25)
+                    prefix = _BULLET_CHARS.get(bullet_style, "")
+                    if prefix:
+                        _add_run(bul_para, prefix, font_name, size_body)
                 _set_paragraph_spacing(bul_para, 0, 1, line_height)
                 _add_inline_md_runs(bul_para, str(bullet), font_name, size_body)
 

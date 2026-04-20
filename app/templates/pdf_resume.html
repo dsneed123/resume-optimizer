@@ -140,7 +140,15 @@
   }
 
   ul.bullets li::before {
+    {% if typography.bullet_style == 'open' %}
+    content: "\25E6";
+    {% elif typography.bullet_style == 'dash' %}
+    content: "\2013";
+    {% elif typography.bullet_style == 'none' %}
+    content: "";
+    {% else %}
     content: "\2022";
+    {% endif %}
     display: inline-block;
     width: 1em;
   }
