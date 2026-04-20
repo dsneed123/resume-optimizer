@@ -395,3 +395,225 @@ body {
         display: none;
     }
 }
+
+/* ── Experience item cards ────────────────────── */
+.exp-item {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.exp-item.dragging {
+    opacity: 0.4;
+}
+
+.exp-item.drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(79,110,247,0.2);
+}
+
+.exp-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f8f9ff;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+}
+
+.exp-item.collapsed .exp-item-header {
+    border-bottom: none;
+}
+
+.drag-handle {
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: grab;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.exp-item-label {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.exp-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.exp-toggle-btn,
+.exp-delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 5px;
+    font-size: 11px;
+    border-radius: 3px;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+
+.exp-toggle-btn {
+    color: var(--text-muted);
+}
+
+.exp-toggle-btn:hover {
+    background: var(--border);
+    color: var(--text);
+}
+
+.exp-delete-btn {
+    color: var(--text-muted);
+}
+
+.exp-delete-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.exp-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+}
+
+.exp-item.collapsed .exp-item-body {
+    display: none;
+}
+
+.date-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.present-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: -4px;
+}
+
+.present-row input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+}
+
+.bullet-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 2px;
+}
+
+.bullet-list-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.bullet-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bullet-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.bullet-reorder {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+.bullet-up,
+.bullet-down {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 1px 3px;
+    font-size: 8px;
+    color: var(--text-muted);
+    line-height: 1.2;
+    border-radius: 2px;
+    transition: color 0.15s;
+}
+
+.bullet-up:hover,
+.bullet-down:hover {
+    color: var(--accent);
+}
+
+.bullet-input {
+    flex: 1;
+    font-size: 12px;
+    padding: 5px 8px;
+    min-width: 0;
+}
+
+.bullet-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+}
+
+.bullet-remove:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.add-bullet-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+}
+
+.add-bullet-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
