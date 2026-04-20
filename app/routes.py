@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import uuid
 
 from flask import Blueprint, Response, current_app, jsonify, render_template, request
@@ -26,6 +27,23 @@ _ALLOWED_MIMETYPES = {
 }
 
 bp = Blueprint('main', __name__)
+
+_VERSION = '1.0.0'
+
+
+@bp.route('/health', methods=['GET'])
+def health():
+    disk = shutil.disk_usage('/')
+    disk_ok = disk.free > 100 * 1024 * 1024  # warn if < 100 MB free
+    return jsonify({
+        'status': 'ok',
+        'version': _VERSION,
+        'disk': {
+            'free_bytes': disk.free,
+            'total_bytes': disk.total,
+            'ok': disk_ok,
+        },
+    })
 
 
 @bp.route('/api/import/linkedin', methods=['POST'])
