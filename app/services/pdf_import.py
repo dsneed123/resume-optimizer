@@ -61,8 +61,12 @@ _SECTION_HEADERS = {
 }
 
 _DATE_RANGE = re.compile(
-    r'(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d{4}'
-    r'(?:\s*[-–—]\s*(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d{4}|present|current))?',
+    # Month+Year with optional range: Jan 2020, Jan 2020 - Present, January 2020 to March 2023
+    r'(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}'
+    r'(?:\s*(?:[-–—]|\bto\b)\s*'
+    r'(?:(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+)?\d{4}|present|current))?'
+    # Year-only range: 2020-2023, 2020 to Present (separator required to avoid matching stray years)
+    r'|\d{4}\s*(?:[-–—]|\bto\b)\s*(?:\d{4}|present|current)',
     re.IGNORECASE,
 )
 
@@ -94,6 +98,8 @@ def _extract_header_fields(lines: list[str]) -> dict:
     name_set = False
     for line in lines:
         line = line.strip()
+        if line.startswith(_HEADER_MARKER):
+            line = line[len(_HEADER_MARKER):].strip()
         if not line:
             continue
         email_match = _EMAIL.search(line)
@@ -120,35 +126,61 @@ def _extract_header_fields(lines: list[str]) -> dict:
 def _parse_experience_block(lines: list[str]) -> list[dict]:
     entries = []
     current: Optional[dict] = None
+    company_context = ""  # Bold/header company name applied to sub-entries (multiple positions)
 
     for line in lines:
         stripped = line.strip()
         if not stripped:
             continue
+
+        # Strip bold/header marker; remember whether this line was formatted as a header
+        is_bold = stripped.startswith(_HEADER_MARKER)
+        if is_bold:
+            stripped = stripped[len(_HEADER_MARKER):].strip()
+        if not stripped:
+            continue
+
         date_match = _DATE_RANGE.search(stripped)
+
         if _is_bullet(stripped):
             if current is None:
-                current = {"company": "", "title": "", "location": "", "start_date": "", "end_date": "", "bullets": []}
+                current = {"company": company_context, "title": "", "location": "", "start_date": "", "end_date": "", "bullets": []}
             bullet_text = re.sub(r'^\s*[•\-–—*▪◦‣⁃]\s+', '', stripped)
             current["bullets"].append(bullet_text)
         elif date_match:
+            date_str = date_match.group()
+            date_parts = re.split(r'\s*(?:[-–—]|\bto\b)\s*', date_str, maxsplit=1, flags=re.IGNORECASE)
+            start_date = date_parts[0].strip()
+            end_date = date_parts[1].strip() if len(date_parts) > 1 else ""
+            remainder = stripped[:date_match.start()].strip(' ,|–—-')
+
+            if current is not None and not current["start_date"] and not remainder:
+                # Date-only line following title/company lines — fill into current entry
+                current["start_date"] = start_date
+                current["end_date"] = end_date
+            else:
+                if current is not None:
+                    entries.append(current)
+                current = {"company": "", "title": "", "location": "", "start_date": start_date, "end_date": end_date, "bullets": []}
+                if remainder:
+                    segments = re.split(r'\s{2,}|,\s*|\s*\|\s*', remainder)
+                    segments = [s.strip() for s in segments if s.strip()]
+                    if segments:
+                        current["title"] = segments[0]
+                    if len(segments) > 1:
+                        current["company"] = segments[1]
+                    elif company_context:
+                        current["company"] = company_context
+                    if len(segments) > 2:
+                        current["location"] = segments[2]
+                elif company_context:
+                    current["company"] = company_context
+        elif is_bold and not date_match:
+            # Bold line with no date — treat as company-level header for multiple positions
             if current is not None:
                 entries.append(current)
-            current = {"company": "", "title": "", "location": "", "start_date": "", "end_date": "", "bullets": []}
-            date_str = date_match.group()
-            parts = re.split(r'\s*[-–—]\s*', date_str, maxsplit=1)
-            current["start_date"] = parts[0].strip()
-            current["end_date"] = parts[1].strip() if len(parts) > 1 else ""
-            remainder = stripped[:date_match.start()].strip(' ,|–—-')
-            if remainder:
-                segments = re.split(r'\s{2,}|,\s*|\s*\|\s*', remainder)
-                segments = [s.strip() for s in segments if s.strip()]
-                if segments:
-                    current["title"] = segments[0]
-                if len(segments) > 1:
-                    current["company"] = segments[1]
-                if len(segments) > 2:
-                    current["location"] = segments[2]
+                current = None
+            company_context = stripped
         elif current is not None:
             segments = re.split(r'\s{2,}|,\s*|\s*\|\s*', stripped)
             segments = [s.strip() for s in segments if s.strip()]
@@ -159,7 +191,7 @@ def _parse_experience_block(lines: list[str]) -> list[dict]:
             elif not current["location"] and segments:
                 current["location"] = segments[0]
         else:
-            current = {"company": "", "title": stripped, "location": "", "start_date": "", "end_date": "", "bullets": []}
+            current = {"company": company_context, "title": stripped, "location": "", "start_date": "", "end_date": "", "bullets": []}
 
     if current is not None:
         entries.append(current)
@@ -172,6 +204,8 @@ def _parse_education_block(lines: list[str]) -> list[dict]:
 
     for line in lines:
         stripped = line.strip()
+        if stripped.startswith(_HEADER_MARKER):
+            stripped = stripped[len(_HEADER_MARKER):].strip()
         if not stripped:
             continue
         date_match = _DATE_RANGE.search(stripped)
@@ -214,6 +248,8 @@ def _parse_skills_block(lines: list[str]) -> list[dict]:
     entries = []
     for line in lines:
         stripped = line.strip()
+        if stripped.startswith(_HEADER_MARKER):
+            stripped = stripped[len(_HEADER_MARKER):].strip()
         if not stripped:
             continue
         if _is_bullet(stripped):
@@ -239,6 +275,8 @@ def _parse_certifications_block(lines: list[str]) -> list[dict]:
     entries = []
     for line in lines:
         stripped = line.strip()
+        if stripped.startswith(_HEADER_MARKER):
+            stripped = stripped[len(_HEADER_MARKER):].strip()
         if not stripped:
             continue
         if _is_bullet(stripped):
@@ -267,6 +305,8 @@ def _parse_projects_block(lines: list[str]) -> list[dict]:
 
     for line in lines:
         stripped = line.strip()
+        if stripped.startswith(_HEADER_MARKER):
+            stripped = stripped[len(_HEADER_MARKER):].strip()
         if not stripped:
             if current is not None:
                 entries.append(current)
@@ -302,6 +342,8 @@ def _parse_awards_block(lines: list[str]) -> list[dict]:
     entries = []
     for line in lines:
         stripped = line.strip()
+        if stripped.startswith(_HEADER_MARKER):
+            stripped = stripped[len(_HEADER_MARKER):].strip()
         if not stripped:
             continue
         if _is_bullet(stripped):
