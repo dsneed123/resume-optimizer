@@ -2532,6 +2532,150 @@
         });
     }
 
+    // ── Import preview modal ──────────────────────
+    var importPreviewModal      = document.getElementById('importPreviewModal');
+    var importPreviewBody       = document.getElementById('importPreviewBody');
+    var importPreviewAcceptBtn  = document.getElementById('importPreviewAcceptBtn');
+    var importPreviewReimportBtn = document.getElementById('importPreviewReimportBtn');
+    var importPreviewModalClose = document.getElementById('importPreviewModalClose');
+
+    var pendingImportData = null;
+    var pendingImportId   = null;
+
+    function openImportPreviewModal() {
+        if (importPreviewModal) importPreviewModal.hidden = false;
+    }
+
+    function closeImportPreviewModal() {
+        if (importPreviewModal) importPreviewModal.hidden = true;
+        pendingImportData = null;
+        pendingImportId = null;
+    }
+
+    function buildSectionContentHTML(key, sectionData) {
+        if (key === 'header') {
+            var h = sectionData || {};
+            var parts = [];
+            if (h.name) parts.push('<strong>' + escHtml(h.name) + '</strong>');
+            if (h.email) parts.push(escHtml(h.email));
+            if (h.phone) parts.push(escHtml(h.phone));
+            if (h.location) parts.push(escHtml(h.location));
+            if (h.linkedin) parts.push(escHtml(h.linkedin));
+            if (h.website) parts.push(escHtml(h.website));
+            return parts.length ? parts.join(' &middot; ') : '<span class="import-preview-empty">No contact info detected</span>';
+        }
+        if (key === 'summary') {
+            if (!sectionData) return '<span class="import-preview-empty">No summary</span>';
+            var text = sectionData.length > 160 ? sectionData.slice(0, 160) + '\u2026' : sectionData;
+            return escHtml(text);
+        }
+        if (key === 'experience') {
+            if (!sectionData || !sectionData.length) return '<span class="import-preview-empty">No entries</span>';
+            var lis = sectionData.map(function (e) {
+                var who = [e.title, e.company].filter(Boolean).join(' at ');
+                var dates = [e.start_date, e.end_date].filter(Boolean).join(' \u2013 ');
+                var bcount = e.bullets && e.bullets.length ? e.bullets.length + ' bullet' + (e.bullets.length === 1 ? '' : 's') : '';
+                return '<li>' + escHtml(who || '(Untitled)') +
+                    (dates ? ' <span class="import-preview-detail">(' + escHtml(dates) + ')</span>' : '') +
+                    (bcount ? ' <span class="import-preview-detail">\u00b7 ' + escHtml(bcount) + '</span>' : '') +
+                    '</li>';
+            });
+            return '<ul class="import-preview-list">' + lis.join('') + '</ul>';
+        }
+        if (key === 'education') {
+            if (!sectionData || !sectionData.length) return '<span class="import-preview-empty">No entries</span>';
+            var lis = sectionData.map(function (e) {
+                var deg = e.degree && e.field ? e.degree + ' in ' + e.field : (e.degree || e.field || '');
+                var desc = [deg, e.school].filter(Boolean).join(' \u2014 ');
+                return '<li>' + escHtml(desc || '(Untitled)') +
+                    (e.graduation_date ? ' <span class="import-preview-detail">(' + escHtml(e.graduation_date) + ')</span>' : '') +
+                    '</li>';
+            });
+            return '<ul class="import-preview-list">' + lis.join('') + '</ul>';
+        }
+        if (key === 'skills') {
+            if (!sectionData || !sectionData.length) return '<span class="import-preview-empty">No skills</span>';
+            var lis = sectionData.map(function (s) {
+                return '<li><strong>' + escHtml(s.category || 'General') + '</strong>: ' + escHtml((s.items || []).join(', ')) + '</li>';
+            });
+            return '<ul class="import-preview-list">' + lis.join('') + '</ul>';
+        }
+        if (key === 'certifications' || key === 'projects' || key === 'awards') {
+            if (!sectionData || !sectionData.length) return '<span class="import-preview-empty">None</span>';
+            var lis = sectionData.map(function (e) {
+                var desc = key === 'projects' && e.description
+                    ? ' \u2014 ' + (e.description.length > 80 ? e.description.slice(0, 80) + '\u2026' : e.description)
+                    : (e.issuer ? ' \u2014 ' + e.issuer : '');
+                return '<li>' + escHtml(e.name || '(Untitled)') +
+                    (desc ? '<span class="import-preview-detail">' + escHtml(desc) + '</span>' : '') + '</li>';
+            });
+            return '<ul class="import-preview-list">' + lis.join('') + '</ul>';
+        }
+        return '';
+    }
+
+    function showImportPreview(data, parseMeta) {
+        if (!importPreviewBody) return;
+        var sections = [
+            { key: 'header',         label: 'Contact Information' },
+            { key: 'summary',        label: 'Summary'             },
+            { key: 'experience',     label: 'Experience'          },
+            { key: 'education',      label: 'Education'           },
+            { key: 'skills',         label: 'Skills'              },
+            { key: 'certifications', label: 'Certifications'      },
+            { key: 'projects',       label: 'Projects'            },
+            { key: 'awards',         label: 'Awards'              },
+        ];
+        var html = '';
+        sections.forEach(function (sec) {
+            var meta = (parseMeta && parseMeta[sec.key]) || { confidence: 'high', notes: [] };
+            var isLow = meta.confidence === 'low';
+            html += '<div class="import-preview-section' + (isLow ? ' import-preview-section--low' : '') + '">' +
+                '<div class="import-preview-section-head">' +
+                    '<span class="import-preview-section-name">' + escHtml(sec.label) + '</span>' +
+                    '<span class="import-preview-confidence import-preview-confidence--' + (isLow ? 'low">\u26a0 Low confidence' : 'high">\u2713 Parsed') + '</span>' +
+                '</div>';
+            if (meta.notes && meta.notes.length) {
+                html += '<div class="import-preview-section-notes">' + escHtml(meta.notes.join('; ')) + '</div>';
+            }
+            html += '<div class="import-preview-section-content">' +
+                buildSectionContentHTML(sec.key, data[sec.key]) +
+                '</div></div>';
+        });
+        importPreviewBody.innerHTML = html;
+        openImportPreviewModal();
+    }
+
+    if (importPreviewModalClose) {
+        importPreviewModalClose.addEventListener('click', closeImportPreviewModal);
+    }
+
+    if (importPreviewModal) {
+        importPreviewModal.addEventListener('click', function (e) {
+            if (e.target === importPreviewModal) closeImportPreviewModal();
+        });
+    }
+
+    if (importPreviewReimportBtn) {
+        importPreviewReimportBtn.addEventListener('click', function () {
+            closeImportPreviewModal();
+            openImportModal();
+        });
+    }
+
+    if (importPreviewAcceptBtn) {
+        importPreviewAcceptBtn.addEventListener('click', function () {
+            if (!pendingImportData) return;
+            var data = pendingImportData;
+            var id   = pendingImportId;
+            closeImportPreviewModal();
+            loadImportedData(data);
+            resumeId = id;
+            lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+            showAutoFitToast('Resume imported successfully.');
+        });
+    }
+
     // ── Import modal ─────────────────────────────
     var importModal     = document.getElementById('importModal');
     var importDropzone  = document.getElementById('importDropzone');
@@ -2725,11 +2869,10 @@
                         importConfirmBtn.disabled = false;
                         return;
                     }
-                    loadImportedData(res.body.data);
-                    resumeId = res.body.id;
-                    lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+                    pendingImportData = res.body.data;
+                    pendingImportId   = res.body.id;
                     closeImportModal();
-                    showAutoFitToast('Resume imported successfully.');
+                    showImportPreview(res.body.data, res.body.parse_meta || {});
                 })
                 .catch(function () {
                     if (importSpinner) importSpinner.hidden = true;

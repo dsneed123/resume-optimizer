@@ -53,9 +53,12 @@ def import_resume():
     except Exception:
         return jsonify({'error': 'Failed to parse file'}), 422
 
+    from app.services.parse_confidence import compute_parse_confidence
+    parse_meta = compute_parse_confidence(data)
+
     resume_id = str(uuid.uuid4())
     save_resume(resume_id, data, default_typography())
-    return jsonify({'id': resume_id, 'data': data}), 201
+    return jsonify({'id': resume_id, 'data': data, 'parse_meta': parse_meta}), 201
 
 
 @bp.route('/')

@@ -88,6 +88,21 @@ def test_import_pdf_parse_failure(client):
     assert 'error' in resp.get_json()
 
 
+def test_import_returns_parse_meta(client):
+    fake_module = MagicMock()
+    fake_module.import_pdf.return_value = _fake_data()
+
+    with patch.dict(sys.modules, {'app.services.pdf_import': fake_module}):
+        resp = _post_file(client, 'resume.pdf', b'%PDF-fake', 'application/pdf')
+
+    assert resp.status_code == 201
+    body = resp.get_json()
+    assert 'parse_meta' in body
+    meta = body['parse_meta']
+    assert 'header' in meta
+    assert meta['header']['confidence'] in ('high', 'low')
+
+
 def test_import_pdf_detected_by_mimetype(client):
     fake_module = MagicMock()
     fake_module.import_pdf.return_value = _fake_data()
