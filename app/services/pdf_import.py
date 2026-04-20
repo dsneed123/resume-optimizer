@@ -1,7 +1,14 @@
 import re
 from typing import Optional
 
-import pdfplumber
+_LIGATURE_MAP = str.maketrans({
+    '\ufb00': 'ff', '\ufb01': 'fi', '\ufb02': 'fl',
+    '\ufb03': 'ffi', '\ufb04': 'ffl', '\ufb05': 'st', '\ufb06': 'st',
+    '\u2019': "'", '\u2018': "'", '\u201c': '"', '\u201d': '"',
+    '\u2013': '-', '\u2014': '--',
+})
+
+_PAGE_NUMBER = re.compile(r'^\s*(?:page\s+)?\d+(?:\s+of\s+\d+)?\s*$', re.IGNORECASE)
 
 _SECTION_HEADERS = {
     'experience': re.compile(
@@ -276,21 +283,76 @@ def _parse_awards_block(lines: list[str]) -> list[dict]:
     return entries
 
 
+def _is_header_footer_line(line: str) -> bool:
+    return bool(_PAGE_NUMBER.match(line))
+
+
+def _words_to_lines(words: list[dict]) -> list[str]:
+    """Group pdfplumber word dicts into text lines, sorted top-to-bottom then left-to-right."""
+    if not words:
+        return []
+    line_groups: list[list[dict]] = []
+    for word in sorted(words, key=lambda w: w['top']):
+        placed = False
+        for group in line_groups:
+            if abs(word['top'] - group[0]['top']) <= 5:
+                group.append(word)
+                placed = True
+                break
+        if not placed:
+            line_groups.append([word])
+    return [" ".join(w['text'] for w in sorted(g, key=lambda w: w['x0'])) for g in line_groups]
+
+
+def _detect_two_columns(words: list[dict], page_w: float) -> bool:
+    """Return True if word x-positions suggest a two-column layout."""
+    if not words:
+        return False
+    mid_lo = page_w * 0.35
+    mid_hi = page_w * 0.65
+    mid_count = sum(1 for w in words if mid_lo < w['x0'] < mid_hi)
+    return mid_count / len(words) < 0.10
+
+
 def _extract_text_from_pdf(file_bytes: bytes) -> str:
     import io
-    lines = []
+    import pdfplumber
+    page_texts = []
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        for page in pdf.pages:
-            # Try to detect multi-column by checking for wide horizontal gaps
+        for page_num, page in enumerate(pdf.pages):
             words = page.extract_words(x_tolerance=3, y_tolerance=3)
-            if words:
-                # Group words by approximate y position (same line)
-                page_text = page.extract_text(x_tolerance=3, y_tolerance=3)
-            else:
+            if not words:
                 page_text = page.extract_text()
-            if page_text:
-                lines.append(page_text)
-    return "\n".join(lines)
+                if page_text:
+                    page_texts.append(page_text.translate(_LIGATURE_MAP))
+                continue
+
+            page_h = page.height
+            page_w = page.width
+            margin = page_h * 0.04
+
+            # Strip repeated header region on pages after the first (titles, name repeats)
+            if page_num > 0:
+                words = [w for w in words if margin < w['top'] < page_h - margin]
+            else:
+                words = [w for w in words if w['top'] < page_h - margin]
+
+            if not words:
+                continue
+
+            if _detect_two_columns(words, page_w):
+                mid_x = page_w / 2
+                left = [w for w in words if (w['x0'] + w['x1']) / 2 < mid_x]
+                right = [w for w in words if (w['x0'] + w['x1']) / 2 >= mid_x]
+                lines = _words_to_lines(left) + _words_to_lines(right)
+            else:
+                lines = _words_to_lines(words)
+
+            lines = [l for l in lines if not _is_header_footer_line(l)]
+            if lines:
+                page_texts.append("\n".join(lines).translate(_LIGATURE_MAP))
+
+    return "\n".join(page_texts)
 
 
 def import_pdf(file_bytes: bytes) -> dict:
