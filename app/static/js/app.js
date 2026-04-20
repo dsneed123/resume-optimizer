@@ -122,14 +122,22 @@
                     margin-bottom: 2pt;
                 }
                 #resumePage .rv-bullets {
-                    list-style: disc;
+                    list-style: none;
                     padding-left: ${t.bullet_indent}pt;
                     margin-top: 2pt;
+                    margin-bottom: 0;
                 }
                 #resumePage .rv-bullets li {
                     font-size: ${t.font_size_body}pt;
                     line-height: ${t.line_height};
-                    margin-bottom: 1pt;
+                    margin-bottom: ${t.paragraph_spacing / 2}pt;
+                    padding-left: 1em;
+                    text-indent: -1em;
+                }
+                #resumePage .rv-bullets li::before {
+                    content: "\u2022";
+                    display: inline-block;
+                    width: 1em;
                 }
                 #resumePage .rv-skills-grid {
                     font-size: ${t.font_size_body}pt;
