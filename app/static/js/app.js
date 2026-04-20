@@ -49,6 +49,19 @@
         _applyTypography() {
             const t = this.typo;
             const layout = t.header_layout || 'centered';
+            const dividerStyle = t.section_divider_style || 'thin';
+            const headerRuleBorder = {
+                thin:   'border-top: 1pt solid #000;',
+                thick:  'border-top: 2.5pt solid #000;',
+                double: 'border-top: 3pt double #000;',
+                none:   'border: none;',
+            }[dividerStyle] || 'border-top: 1pt solid #000;';
+            const sectionTitleBorder = {
+                thin:   'border-bottom: 0.5pt solid #000;',
+                thick:  'border-bottom: 2pt solid #000;',
+                double: 'border-bottom: 3pt double #000;',
+                none:   'border: none;',
+            }[dividerStyle] || 'border-bottom: 0.5pt solid #000;';
             const headerLayoutCSS = layout === 'left-aligned'
                 ? 'display: flex; justify-content: space-between; align-items: baseline;'
                 : layout === 'two-line'
@@ -82,7 +95,7 @@
                 }
                 #resumePage .rv-header-rule {
                     border: none;
-                    border-top: 1pt solid #000;
+                    ${headerRuleBorder}
                     margin-top: 5pt;
                     margin-bottom: ${t.section_spacing}pt;
                 }
@@ -94,7 +107,7 @@
                     font-weight: bold;
                     text-transform: uppercase;
                     letter-spacing: 0.5pt;
-                    border-bottom: 0.5pt solid #000;
+                    ${sectionTitleBorder}
                     padding-bottom: 1pt;
                     margin-bottom: 4pt;
                 }
@@ -1896,6 +1909,16 @@
         });
     }
 
+    var typoSectionDividerStyleEl = document.getElementById('typoSectionDividerStyle');
+    if (typoSectionDividerStyleEl) {
+        typoSectionDividerStyleEl.value = state.typo.section_divider_style || 'thin';
+        typoSectionDividerStyleEl.addEventListener('change', function () {
+            pushHistory();
+            state.typo.section_divider_style = typoSectionDividerStyleEl.value;
+            notifyChange();
+        });
+    }
+
     var typoSizeNameSlider = document.getElementById('typoSizeName');
     var typoSizeNameNum = document.getElementById('typoSizeNameNum');
     if (typoSizeNameSlider && typoSizeNameNum) {
@@ -2059,6 +2082,9 @@
 
         var contactSepEl = document.getElementById('typoContactSeparator');
         if (contactSepEl) contactSepEl.value = typo.contact_separator || 'pipe';
+
+        var sectionDividerEl = document.getElementById('typoSectionDividerStyle');
+        if (sectionDividerEl) sectionDividerEl.value = typo.section_divider_style || 'thin';
 
         var sizeNameSlider = document.getElementById('typoSizeName');
         var sizeNameNum = document.getElementById('typoSizeNameNum');
