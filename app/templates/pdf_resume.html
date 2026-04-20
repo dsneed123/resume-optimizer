@@ -51,7 +51,7 @@
   }
 
   .header .contact span + span::before {
-    content: " | ";
+    content: "{% if typography.contact_separator == 'dot' %} · {% elif typography.contact_separator == 'diamond' %} ◆ {% elif typography.contact_separator == 'dash' %} – {% else %} | {% endif %}";
     color: #999;
   }
 
