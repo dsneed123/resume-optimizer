@@ -3299,14 +3299,16 @@
     }
 
     // ── Job Match Panel ───────────────────────────
-    var jobDescInputEl      = document.getElementById('jobDescriptionInput');
+    var jobDescInputEl       = document.getElementById('jobDescriptionInput');
     var analyzeJobMatchBtnEl = document.getElementById('analyzeJobMatchBtn');
-    var jobMatchResultsEl   = document.getElementById('jobMatchResults');
-    var jobMatchScoreNumEl  = document.getElementById('jobMatchScoreNumber');
-    var jobMatchScoreLblEl  = document.getElementById('jobMatchScoreLabel');
-    var jobMatchScoreBarEl  = document.getElementById('jobMatchScoreBar');
-    var jobMatchMatchedEl   = document.getElementById('jobMatchMatched');
-    var jobMatchMissingEl   = document.getElementById('jobMatchMissing');
+    var clearJobMatchBtnEl   = document.getElementById('clearJobMatchBtn');
+    var jobMatchResultsEl    = document.getElementById('jobMatchResults');
+    var jobMatchScoreNumEl   = document.getElementById('jobMatchScoreNumber');
+    var jobMatchScoreLblEl   = document.getElementById('jobMatchScoreLabel');
+    var jobMatchScoreBarEl   = document.getElementById('jobMatchScoreBar');
+    var jobMatchMatchedEl    = document.getElementById('jobMatchMatched');
+    var jobMatchMissingEl    = document.getElementById('jobMatchMissing');
+    var jobMatchSuggestionsEl = document.getElementById('jobMatchSuggestions');
 
     var JM_CHECK_ICON =
         '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">' +
@@ -3373,14 +3375,44 @@
             if (missing.length > 0) {
                 jobMatchMissingEl.innerHTML =
                     '<div class="ats-list-title">Missing Keywords (' + missing.length + ')</div>' +
+                    '<div class="jm-chips">' +
                     missing.map(function (m) {
-                        return '<div class="ats-item jm-missing-item">' +
-                            '<span class="ats-item-icon jm-miss-icon">' + JM_MISS_ICON + '</span>' +
-                            '<span><strong>' + escHtml(m.keyword) + '</strong> — ' + escHtml(m.suggestion) + '</span>' +
-                            '</div>';
-                    }).join('');
+                        return '<span class="jm-chip jm-chip--miss" title="' + escHtml(m.suggestion) + '">' +
+                            JM_MISS_ICON + ' ' + escHtml(m.keyword) + '</span>';
+                    }).join('') +
+                    '</div>';
             } else {
                 jobMatchMissingEl.innerHTML = '<p class="ats-empty">All keywords found!</p>';
+            }
+        }
+
+        if (jobMatchSuggestionsEl) {
+            var uniqueSuggestions = [];
+            var seen = {};
+            missing.forEach(function (m) {
+                if (m.suggestion && !seen[m.suggestion]) {
+                    seen[m.suggestion] = true;
+                    uniqueSuggestions.push({ suggestion: m.suggestion, keywords: [] });
+                }
+                uniqueSuggestions.forEach(function (s) {
+                    if (s.suggestion === m.suggestion) s.keywords.push(m.keyword);
+                });
+            });
+            if (uniqueSuggestions.length > 0) {
+                jobMatchSuggestionsEl.innerHTML =
+                    '<div class="ats-list-title">Suggestions</div>' +
+                    '<ul class="jm-suggestions">' +
+                    uniqueSuggestions.map(function (s) {
+                        return '<li class="jm-suggestion-item">' +
+                            '<span class="jm-suggestion-text">' + escHtml(s.suggestion) + '</span>' +
+                            '<span class="jm-suggestion-kws">' + s.keywords.map(function (k) {
+                                return '<code class="jm-kw-code">' + escHtml(k) + '</code>';
+                            }).join('') + '</span>' +
+                            '</li>';
+                    }).join('') +
+                    '</ul>';
+            } else {
+                jobMatchSuggestionsEl.innerHTML = '';
             }
         }
 
@@ -3389,6 +3421,22 @@
 
     if (analyzeJobMatchBtnEl) {
         analyzeJobMatchBtnEl.addEventListener('click', fetchJobMatch);
+    }
+
+    if (clearJobMatchBtnEl) {
+        clearJobMatchBtnEl.addEventListener('click', function () {
+            if (jobDescInputEl) jobDescInputEl.value = '';
+            if (jobMatchResultsEl) jobMatchResultsEl.hidden = true;
+            if (jobMatchMatchedEl) jobMatchMatchedEl.innerHTML = '';
+            if (jobMatchMissingEl) jobMatchMissingEl.innerHTML = '';
+            if (jobMatchSuggestionsEl) jobMatchSuggestionsEl.innerHTML = '';
+            if (jobMatchScoreNumEl) jobMatchScoreNumEl.textContent = '0%';
+            if (jobMatchScoreLblEl) jobMatchScoreLblEl.textContent = 'Match';
+            if (jobMatchScoreBarEl) {
+                jobMatchScoreBarEl.style.width = '0%';
+                jobMatchScoreBarEl.className = 'jm-score-bar-fill';
+            }
+        });
     }
 
     // ── Unified keyboard shortcuts ───────────────

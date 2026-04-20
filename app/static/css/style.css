@@ -2406,10 +2406,88 @@ body {
     border: 1px solid #bbf7d0;
 }
 
+.jm-chip--miss {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
 .jm-missing-item {
     align-items: flex-start;
 }
 
 .jm-miss-icon {
     margin-top: 2px;
+}
+
+.jm-btn-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.jm-btn-row .ats-refresh-btn {
+    flex: 1;
+}
+
+.jm-clear-btn {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.jm-clear-btn:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.jm-suggestions {
+    list-style: none;
+    margin: 0;
+    padding: 0 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.jm-suggestion-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    background: #fafafa;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.jm-suggestion-text {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.jm-suggestion-kws {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.jm-kw-code {
+    display: inline-block;
+    padding: 1px 6px;
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 500;
 }
