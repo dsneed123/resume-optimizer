@@ -77,7 +77,7 @@
                     color: #333;
                 }
                 #resumePage .rv-contact span + span::before {
-                    content: " | ";
+                    content: "${{'pipe': ' | ', 'dot': ' \u00b7 ', 'diamond': ' \u25c6 ', 'dash': ' \u2013 '}[t.contact_separator || 'pipe']}";
                     color: #999;
                 }
                 #resumePage .rv-header-rule {
@@ -448,6 +448,7 @@
             bullet_indent: 12,
             date_format: 'MMM YYYY',
             header_layout: 'centered',
+            contact_separator: 'pipe',
         };
     }
 
@@ -1886,6 +1887,15 @@
         });
     }
 
+    var typoContactSeparatorEl = document.getElementById('typoContactSeparator');
+    if (typoContactSeparatorEl) {
+        typoContactSeparatorEl.value = state.typo.contact_separator || 'pipe';
+        typoContactSeparatorEl.addEventListener('change', function () {
+            state.typo.contact_separator = typoContactSeparatorEl.value;
+            notifyChange();
+        });
+    }
+
     var typoSizeNameSlider = document.getElementById('typoSizeName');
     var typoSizeNameNum = document.getElementById('typoSizeNameNum');
     if (typoSizeNameSlider && typoSizeNameNum) {
@@ -2046,6 +2056,9 @@
                 btn.classList.toggle('active', btn.dataset.layout === typo.header_layout);
             });
         }
+
+        var contactSepEl = document.getElementById('typoContactSeparator');
+        if (contactSepEl) contactSepEl.value = typo.contact_separator || 'pipe';
 
         var sizeNameSlider = document.getElementById('typoSizeName');
         var sizeNameNum = document.getElementById('typoSizeNameNum');

@@ -158,6 +158,7 @@ class TypographySettings:
     bullet_indent: float = 12
     date_format: str = "MMM YYYY"
     header_layout: str = "centered"
+    contact_separator: str = "pipe"
 
 
 def default_typography() -> dict:
@@ -177,6 +178,7 @@ def default_typography() -> dict:
         "bullet_indent": 12,
         "date_format": "MMM YYYY",
         "header_layout": "centered",
+        "contact_separator": "pipe",
     }
 
 
