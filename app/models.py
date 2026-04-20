@@ -156,6 +156,7 @@ class TypographySettings:
     margin_left: float = 0.6
     margin_right: float = 0.6
     bullet_indent: float = 12
+    date_format: str = "MMM YYYY"
 
 
 def default_typography() -> dict:
@@ -173,6 +174,7 @@ def default_typography() -> dict:
         "margin_left": 0.6,
         "margin_right": 0.6,
         "bullet_indent": 12,
+        "date_format": "MMM YYYY",
     }
 
 
