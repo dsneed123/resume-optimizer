@@ -582,6 +582,110 @@
         awards:         { label: 'Awards',      showKey: 'show_awards' },
     };
 
+    var SECTION_COUNT_GETTERS = {
+        experience:     function () { return (state.data.experience || []).length; },
+        education:      function () { return (state.data.education || []).length; },
+        skills:         function () { return (state.data.skills || []).length; },
+        projects:       function () { return (state.data.projects || []).length; },
+        certifications: function () { return (state.data.certifications || []).length; },
+        awards:         function () { return (state.data.awards || []).length; },
+    };
+
+    var LS_COLLAPSED_KEY = 'ro_collapsed_sections';
+
+    function loadCollapsedSections() {
+        try { return JSON.parse(localStorage.getItem(LS_COLLAPSED_KEY) || '{}'); }
+        catch (e) { return {}; }
+    }
+
+    function saveCollapsedSections(map) {
+        try { localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify(map)); }
+        catch (e) {}
+    }
+
+    var CHEVRON_SVG = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function updateSectionBadge(key) {
+        var getter = SECTION_COUNT_GETTERS[key];
+        if (!getter) return;
+        var badge = document.getElementById('badge-' + key);
+        if (badge) badge.textContent = getter();
+    }
+
+    function updateSectionBadges() {
+        Object.keys(SECTION_COUNT_GETTERS).forEach(updateSectionBadge);
+        (state.data.custom_sections || []).forEach(function (cs) {
+            var badge = document.getElementById('badge-custom_' + cs.id);
+            if (badge) badge.textContent = (cs.bullets || []).length;
+        });
+    }
+
+    function initPanelCollapsibility(panel) {
+        if (!panel || panel.dataset.collapsibleInit) return;
+        panel.dataset.collapsibleInit = '1';
+
+        var header = panel.querySelector('.section-header');
+        if (!header) return;
+
+        // Wrap non-header children in section-body if not already present
+        if (!panel.querySelector('.section-body')) {
+            var body = document.createElement('div');
+            body.className = 'section-body';
+            Array.from(panel.children).forEach(function (child) {
+                if (!child.classList.contains('section-header')) body.appendChild(child);
+            });
+            panel.appendChild(body);
+        }
+
+        var chevron = document.createElement('span');
+        chevron.className = 'section-chevron';
+        chevron.innerHTML = CHEVRON_SVG;
+
+        var title = header.querySelector('.section-title');
+        var sectionKey = panel.id.replace('section-', '');
+
+        if (title) {
+            var leftGroup = document.createElement('div');
+            leftGroup.className = 'section-header-group';
+            leftGroup.appendChild(chevron);
+            header.removeChild(title);
+            leftGroup.appendChild(title);
+            if (SECTION_COUNT_GETTERS[sectionKey] || sectionKey.startsWith('custom_')) {
+                var badge = document.createElement('span');
+                badge.className = 'section-badge';
+                badge.id = 'badge-' + sectionKey;
+                leftGroup.appendChild(badge);
+            }
+            header.insertBefore(leftGroup, header.firstChild);
+        } else {
+            // Custom section: input-based title — add chevron + badge separately
+            header.insertBefore(chevron, header.firstChild);
+            var badge = document.createElement('span');
+            badge.className = 'section-badge';
+            badge.id = 'badge-' + sectionKey;
+            var titleInput = header.querySelector('.custom-section-title');
+            if (titleInput) titleInput.insertAdjacentElement('afterend', badge);
+        }
+
+        var collapsedMap = loadCollapsedSections();
+        if (collapsedMap[panel.id]) panel.classList.add('section-collapsed');
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.add-btn') ||
+                e.target.closest('.summary-toggle') ||
+                e.target.tagName === 'INPUT') return;
+            var isNowCollapsed = panel.classList.toggle('section-collapsed');
+            var map = loadCollapsedSections();
+            map[panel.id] = isNowCollapsed;
+            saveCollapsedSections(map);
+        });
+    }
+
+    function initSectionCollapsibility() {
+        document.querySelectorAll('.sidebar-section').forEach(initPanelCollapsibility);
+        updateSectionBadges();
+    }
+
     function getSectionMeta(key) {
         if (SECTION_META[key]) return SECTION_META[key];
         if (key.startsWith('custom_')) {
@@ -718,6 +822,7 @@
         schedulePageCheck();
         scheduleSave();
         scheduleAtsRefresh();
+        updateSectionBadges();
     }
 
     // ── Undo/Redo History ────────────────────────
@@ -2199,9 +2304,11 @@
                 '<input class="field-input custom-section-title" type="text" value="' + escHtml(cs.title || '') + '" placeholder="Section Title">' +
                 '<button class="add-btn">+ Add</button>' +
             '</div>' +
-            '<div class="bullet-list" id="customBulletList_' + cs.id + '">' + bulletsHtml + '</div>' +
-            '<div class="custom-section-footer">' +
-                '<button class="delete-custom-section-btn">Delete this section</button>' +
+            '<div class="section-body">' +
+                '<div class="bullet-list" id="customBulletList_' + cs.id + '">' + bulletsHtml + '</div>' +
+                '<div class="custom-section-footer">' +
+                    '<button class="delete-custom-section-btn">Delete this section</button>' +
+                '</div>' +
             '</div>';
 
         var titleInput = panel.querySelector('.custom-section-title');
@@ -2293,6 +2400,7 @@
             container.appendChild(buildCustomSectionPanel(cs));
         });
         initCustomSectionCounter();
+        initSectionCollapsibility();
     }
 
     function addCustomSection() {
@@ -3563,5 +3671,6 @@
         );
     });
 
+    initSectionCollapsibility();
     initResumeId();
 })();
