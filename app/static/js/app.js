@@ -1,5 +1,56 @@
 // Resume Optimizer — main app entry point
 
+// ── Theme management ─────────────────────────────
+(function () {
+    var LS_THEME_KEY = 'ro_theme';
+
+    function getSystemTheme() {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+        var resolved = theme === 'system' ? getSystemTheme() : theme;
+        document.documentElement.setAttribute('data-theme', resolved);
+        var btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        var sun = btn.querySelector('.theme-icon-sun');
+        var moon = btn.querySelector('.theme-icon-moon');
+        if (resolved === 'dark') {
+            btn.setAttribute('aria-label', 'Switch to light mode');
+            if (sun) sun.style.display = 'none';
+            if (moon) moon.style.display = '';
+        } else {
+            btn.setAttribute('aria-label', 'Switch to dark mode');
+            if (sun) sun.style.display = '';
+            if (moon) moon.style.display = 'none';
+        }
+    }
+
+    function initTheme() {
+        var saved = null;
+        try { saved = localStorage.getItem(LS_THEME_KEY); } catch (e) {}
+        applyTheme(saved || 'system');
+
+        var btn = document.getElementById('themeToggleBtn');
+        if (btn) {
+            btn.addEventListener('click', function () {
+                var current = document.documentElement.getAttribute('data-theme');
+                var next = current === 'dark' ? 'light' : 'dark';
+                try { localStorage.setItem(LS_THEME_KEY, next); } catch (e) {}
+                applyTheme(next);
+            });
+        }
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+            var pref = null;
+            try { pref = localStorage.getItem(LS_THEME_KEY); } catch (e) {}
+            if (!pref) applyTheme('system');
+        });
+    }
+
+    initTheme();
+})();
+
 (function () {
     // ── Sidebar toggle (mobile) ──────────────────
     const sidebar = document.getElementById('sidebar');
