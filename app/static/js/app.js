@@ -56,6 +56,10 @@
                     line-height: ${t.line_height};
                     color: #000;
                 }
+                #resumePage .rv-header {
+                    text-align: center;
+                    margin-bottom: 4pt;
+                }
                 #resumePage .rv-name {
                     font-size: ${t.font_size_name}pt;
                     font-weight: bold;
@@ -70,8 +74,10 @@
                     content: " | ";
                     color: #999;
                 }
-                #resumePage .rv-header {
-                    text-align: center;
+                #resumePage .rv-header-rule {
+                    border: none;
+                    border-top: 1pt solid #000;
+                    margin-top: 5pt;
                     margin-bottom: ${t.section_spacing}pt;
                 }
                 #resumePage .rv-section {
@@ -82,9 +88,13 @@
                     font-weight: bold;
                     text-transform: uppercase;
                     letter-spacing: 0.5pt;
-                    border-bottom: 1pt solid #000;
+                    border-bottom: 0.5pt solid #000;
                     padding-bottom: 1pt;
                     margin-bottom: 4pt;
+                }
+                #resumePage .rv-summary {
+                    font-size: ${t.font_size_body}pt;
+                    line-height: ${t.line_height};
                 }
                 #resumePage .rv-entry {
                     margin-bottom: ${t.paragraph_spacing}pt;
@@ -94,9 +104,11 @@
                     justify-content: space-between;
                     align-items: baseline;
                 }
+                #resumePage .rv-entry-left {
+                    font-size: ${t.font_size_body}pt;
+                }
                 #resumePage .rv-entry-title {
                     font-weight: bold;
-                    font-size: ${t.font_size_body}pt;
                 }
                 #resumePage .rv-entry-date {
                     font-size: ${t.font_size_detail}pt;
@@ -119,12 +131,15 @@
                     line-height: ${t.line_height};
                     margin-bottom: 1pt;
                 }
+                #resumePage .rv-skills-grid {
+                    font-size: ${t.font_size_body}pt;
+                    line-height: ${t.line_height};
+                }
                 #resumePage .rv-skill-cat {
                     font-weight: bold;
                 }
                 #resumePage .rv-skill-row {
                     margin-bottom: 2pt;
-                    font-size: ${t.font_size_body}pt;
                 }
                 #resumePage .rv-cert {
                     margin-bottom: ${t.paragraph_spacing}pt;
@@ -132,6 +147,10 @@
                 #resumePage .rv-cert-name {
                     font-weight: bold;
                     font-size: ${t.font_size_body}pt;
+                }
+                #resumePage .rv-cert-meta {
+                    font-size: ${t.font_size_detail}pt;
+                    color: #444;
                 }
             `;
         }
@@ -165,7 +184,7 @@
             if (!d.summary || d.show_summary === false) return '';
             return '<div class="rv-section">' +
                 '<div class="rv-section-title">Summary</div>' +
-                `<div>${this._esc(d.summary)}</div>` +
+                `<div class="rv-summary">${this._esc(d.summary)}</div>` +
                 '</div>';
         }
 
@@ -175,13 +194,13 @@
             let html = '<div class="rv-section"><div class="rv-section-title">Experience</div>';
             for (const e of exp) {
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-title">${this._esc(e.title)}</span>`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(e.title)}</span>`;
+                if (e.company) html += ` | ${this._esc(e.company)}`;
+                if (e.location) html += ` \u00b7 ${this._esc(e.location)}`;
+                html += '</span>';
                 const dates = [e.start_date, e.end_date].filter(Boolean).join(' \u2013 ');
                 if (dates) html += `<span class="rv-entry-date">${this._esc(dates)}</span>`;
                 html += '</div>';
-                let sub = this._esc(e.company);
-                if (e.location) sub += ` \u2014 ${this._esc(e.location)}`;
-                html += `<div class="rv-entry-sub">${sub}</div>`;
                 if (e.bullets && e.bullets.length) {
                     html += '<ul class="rv-bullets">';
                     for (const b of e.bullets) html += `<li>${this._esc(b)}</li>`;
@@ -198,14 +217,19 @@
             let html = '<div class="rv-section"><div class="rv-section-title">Education</div>';
             for (const e of edu) {
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-title">${this._esc(e.school)}</span>`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(e.school)}</span>`;
+                if (e.degree) html += ` \u00b7 ${this._esc(e.degree)}`;
+                if (e.field) html += `, ${this._esc(e.field)}`;
+                html += '</span>';
                 if (e.graduation_date) html += `<span class="rv-entry-date">${this._esc(e.graduation_date)}</span>`;
                 html += '</div>';
-                const parts = [e.degree, e.field].filter(Boolean).join(', ');
-                let sub = parts;
-                if (e.gpa) sub += ` \u00b7 GPA: ${e.gpa}`;
-                if (e.honors) sub += ` \u00b7 ${e.honors}`;
-                if (sub) html += `<div class="rv-entry-sub">${this._esc(sub)}</div>`;
+                if (e.gpa || e.honors) {
+                    let sub = '';
+                    if (e.gpa) sub += `GPA: ${this._esc(e.gpa)}`;
+                    if (e.gpa && e.honors) sub += ' \u00b7 ';
+                    if (e.honors) sub += this._esc(e.honors);
+                    html += `<div class="rv-entry-sub">${sub}</div>`;
+                }
                 html += '</div>';
             }
             return html + '</div>';
@@ -214,14 +238,14 @@
         _renderSkillsHtml(d) {
             const skills = (d.skills || []).filter(s => s.category || (s.items && s.items.length));
             if (!skills.length) return '';
-            let html = '<div class="rv-section"><div class="rv-section-title">Skills</div>';
+            let html = '<div class="rv-section"><div class="rv-section-title">Skills</div><div class="rv-skills-grid">';
             for (const s of skills) {
                 html += '<div class="rv-skill-row">';
                 if (s.category) html += `<span class="rv-skill-cat">${this._esc(s.category)}:</span> `;
                 html += this._esc((s.items || []).join(', '));
                 html += '</div>';
             }
-            return html + '</div>';
+            return html + '</div></div>';
         }
 
         _renderProjectsHtml(d) {
@@ -230,11 +254,12 @@
             let html = '<div class="rv-section"><div class="rv-section-title">Projects</div>';
             for (const p of projects) {
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-title">${this._esc(p.name)}</span>`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(p.name)}</span>`;
+                if (p.technologies) html += ` \u00b7 ${this._esc(p.technologies)}`;
+                html += '</span>';
                 if (p.url) html += `<span class="rv-entry-date">${this._esc(p.url)}</span>`;
                 html += '</div>';
-                if (p.technologies) html += `<div class="rv-entry-sub">${this._esc(p.technologies)}</div>`;
-                if (p.description) html += `<div style="margin-top:2pt">${this._esc(p.description)}</div>`;
+                if (p.description) html += `<div style="font-size:${this.typo.font_size_body}pt;margin-top:2pt">${this._esc(p.description)}</div>`;
                 html += '</div>';
             }
             return html + '</div>';
@@ -249,7 +274,7 @@
                 html += `<span class="rv-cert-name">${this._esc(c.name)}</span>`;
                 if (c.date) html += `<span class="rv-entry-date">${this._esc(c.date)}</span>`;
                 html += '</div>';
-                if (c.issuer) html += `<div class="rv-entry-sub">${this._esc(c.issuer)}</div>`;
+                if (c.issuer) html += `<div class="rv-cert-meta">${this._esc(c.issuer)}</div>`;
                 html += '</div>';
             }
             return html + '</div>';
@@ -261,11 +286,12 @@
             let html = '<div class="rv-section"><div class="rv-section-title">Awards</div>';
             for (const a of awards) {
                 html += '<div class="rv-entry"><div class="rv-entry-header">';
-                html += `<span class="rv-entry-title">${this._esc(a.name)}</span>`;
+                html += `<span class="rv-entry-left"><span class="rv-entry-title">${this._esc(a.name)}</span>`;
+                if (a.issuer) html += ` | ${this._esc(a.issuer)}`;
+                html += '</span>';
                 if (a.date) html += `<span class="rv-entry-date">${this._esc(a.date)}</span>`;
                 html += '</div>';
-                if (a.issuer) html += `<div class="rv-entry-sub">${this._esc(a.issuer)}</div>`;
-                if (a.description) html += `<div style="margin-top:2pt">${this._esc(a.description)}</div>`;
+                if (a.description) html += `<div style="font-size:${this.typo.font_size_body}pt;margin-top:2pt">${this._esc(a.description)}</div>`;
                 html += '</div>';
             }
             return html + '</div>';
@@ -289,6 +315,7 @@
             if (h.linkedin) html += `<span>${this._esc(h.linkedin)}</span>`;
             if (h.website) html += `<span>${this._esc(h.website)}</span>`;
             html += '</div></div>';
+            html += '<hr class="rv-header-rule">';
 
             // Remaining sections in user-defined order
             const order = d.section_order || ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards'];
