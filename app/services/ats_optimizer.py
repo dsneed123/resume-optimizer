@@ -389,6 +389,44 @@ def _check_date_consistency(resume_data: dict) -> tuple[bool, list[str]]:
     return len(issues) == 0, issues
 
 
+def _check_skills_analysis(resume_data: dict) -> tuple[bool, list[str]]:
+    """Flag too few skills or > 10 uncategorized skills."""
+    skills = resume_data.get("skills", [])
+    if not isinstance(skills, list):
+        return True, []
+
+    all_items: list[str] = []
+    named_categories: list[str] = []
+    for s in skills:
+        if not isinstance(s, dict):
+            continue
+        items = s.get("items", [])
+        if items:
+            all_items.extend(items)
+            cat = (s.get("category") or "").strip()
+            if cat:
+                named_categories.append(cat)
+
+    if not all_items:
+        return True, []
+
+    issues = []
+    if len(all_items) < 5:
+        issues.append(
+            f"Only {len(all_items)} skill(s) listed. "
+            "Include at least 5 skills to improve ATS keyword matching."
+        )
+
+    if len(all_items) > 10 and len(named_categories) <= 1:
+        issues.append(
+            f"{len(all_items)} skills are listed without categories. "
+            "Organize skills into named categories (e.g., 'Languages', 'Frameworks') "
+            "to improve readability and ATS parsing."
+        )
+
+    return len(issues) == 0, issues
+
+
 def _check_section_headings(resume_data: dict) -> tuple[bool, list[str]]:
     """Flag non-standard section headings; each costs -5 in the caller."""
     section_headings = resume_data.get("section_headings")
@@ -453,6 +491,12 @@ def analyze_ats_score(resume_data: dict) -> dict:
     if not passed:
         all_issues.extend(bullet_quality_issues)
         penalty += 2 * len(bullet_quality_issues)
+
+    # -5 per skills analysis issue (too few skills, or > 10 uncategorized)
+    passed, skills_analysis_issues = _check_skills_analysis(resume_data)
+    if not passed:
+        all_issues.extend(skills_analysis_issues)
+        penalty += 5 * len(skills_analysis_issues)
 
     score = max(0, 100 - penalty)
     return {"score": score, "issues": all_issues}
