@@ -554,27 +554,41 @@
                 <h2 class="modal-title" id="importModalTitle">Import Resume</h2>
                 <button class="modal-close" id="importModalClose" aria-label="Close">&times;</button>
             </div>
+            <div class="import-tabs" role="tablist">
+                <button type="button" class="import-tab import-tab--active" id="importTabFile" role="tab" aria-controls="importPanelFile" aria-selected="true">Upload File</button>
+                <button type="button" class="import-tab" id="importTabText" role="tab" aria-controls="importPanelText" aria-selected="false">Paste Text</button>
+            </div>
             <div class="modal-body">
-                <div class="dropzone" id="importDropzone">
-                    <input type="file" id="importFileInput" accept=".pdf,.docx" class="dropzone-input">
-                    <svg class="dropzone-icon" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-                        <rect x="8" y="6" width="24" height="28" rx="3" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M14 20h12M20 14v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                    <p class="dropzone-text">Drag &amp; drop your resume here</p>
-                    <p class="dropzone-subtext">PDF or DOCX &mdash; max 10 MB</p>
-                    <button type="button" class="dropzone-browse" id="importBrowseBtn">Browse files</button>
-                </div>
-                <div class="import-file-info" id="importFileInfo" hidden>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                        <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                    <div class="import-file-meta">
-                        <div class="import-file-name" id="importFileName"></div>
-                        <div class="import-file-size" id="importFileSize"></div>
+                <div id="importPanelFile" role="tabpanel" aria-labelledby="importTabFile">
+                    <div class="dropzone" id="importDropzone">
+                        <input type="file" id="importFileInput" accept=".pdf,.docx" class="dropzone-input">
+                        <svg class="dropzone-icon" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                            <rect x="8" y="6" width="24" height="28" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M14 20h12M20 14v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <p class="dropzone-text">Drag &amp; drop your resume here</p>
+                        <p class="dropzone-subtext">PDF or DOCX &mdash; max 10 MB</p>
+                        <button type="button" class="dropzone-browse" id="importBrowseBtn">Browse files</button>
                     </div>
-                    <button type="button" class="import-file-clear" id="importFileClear" aria-label="Remove file">&times;</button>
+                    <div class="import-file-info" id="importFileInfo" hidden>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <div class="import-file-meta">
+                            <div class="import-file-name" id="importFileName"></div>
+                            <div class="import-file-size" id="importFileSize"></div>
+                        </div>
+                        <button type="button" class="import-file-clear" id="importFileClear" aria-label="Remove file">&times;</button>
+                    </div>
+                </div>
+                <div id="importPanelText" role="tabpanel" aria-labelledby="importTabText" hidden>
+                    <textarea
+                        id="importTextarea"
+                        class="import-textarea"
+                        placeholder="Paste your resume text here&hellip;"
+                        aria-label="Resume plain text"
+                    ></textarea>
                 </div>
                 <div class="import-error" id="importError" hidden></div>
             </div>
