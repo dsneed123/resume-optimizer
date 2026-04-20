@@ -25,7 +25,10 @@
     class ResumePreview {
         constructor(pageEl, previewEl) {
             this.page = pageEl;
+            this.pageWrap = pageEl.parentElement; // .page-wrap shadow container
             this.preview = previewEl;
+            this._zoom = null; // null = auto-fit
+            this._zoomLevelEl = null;
             this.data = null;
             this.typo = null;
 
@@ -36,6 +39,8 @@
 
             this._ro = new ResizeObserver(() => this._applyScale());
             this._ro.observe(this.preview);
+
+            this._initZoomControls();
         }
 
         update(data, typo) {
@@ -215,19 +220,63 @@
         _applyScale() {
             const PAGE_W = 816;
             const available = this.preview.clientWidth - 64; // 32px padding each side
-            const s = (available > 0 && available < PAGE_W) ? available / PAGE_W : 1;
+            let s;
+
+            if (this._zoom !== null) {
+                s = this._zoom;
+            } else {
+                s = (available > 0 && available < PAGE_W) ? available / PAGE_W : 1;
+            }
+
+            const el = this.pageWrap || this.page;
+
+            if (s !== 1) {
+                el.style.transform = `scale(${s.toFixed(4)})`;
+            } else {
+                el.style.transform = '';
+            }
 
             if (s < 1) {
-                this.page.style.transform = `scale(${s.toFixed(4)})`;
-                this.page.style.transformOrigin = 'top center';
                 // Shrink layout footprint to match visual size
-                const h = this.page.offsetHeight;
-                this.page.style.marginBottom = `${Math.round(h * (s - 1))}px`;
+                const h = el.offsetHeight;
+                el.style.marginBottom = `${Math.round(h * (s - 1))}px`;
             } else {
-                this.page.style.transform = '';
-                this.page.style.transformOrigin = '';
-                this.page.style.marginBottom = '';
+                el.style.marginBottom = '';
             }
+
+            if (this._zoomLevelEl) {
+                this._zoomLevelEl.textContent = Math.round(s * 100) + '%';
+            }
+        }
+
+        _initZoomControls() {
+            this._zoomLevelEl = document.getElementById('zoomLevel');
+
+            const zoomInBtn = document.getElementById('zoomInBtn');
+            const zoomOutBtn = document.getElementById('zoomOutBtn');
+            const zoomFitBtn = document.getElementById('zoomFitBtn');
+
+            if (zoomInBtn) zoomInBtn.addEventListener('click', () => this._adjustZoom(0.1));
+            if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => this._adjustZoom(-0.1));
+            if (zoomFitBtn) zoomFitBtn.addEventListener('click', () => {
+                this._zoom = null;
+                this._applyScale();
+            });
+
+            this.preview.addEventListener('wheel', (e) => {
+                if (!e.ctrlKey && !e.metaKey) return;
+                e.preventDefault();
+                this._adjustZoom(e.deltaY > 0 ? -0.1 : 0.1);
+            }, { passive: false });
+        }
+
+        _adjustZoom(delta) {
+            const PAGE_W = 816;
+            const available = this.preview.clientWidth - 64;
+            const autoFit = (available > 0 && available < PAGE_W) ? available / PAGE_W : 1;
+            const current = this._zoom !== null ? this._zoom : autoFit;
+            this._zoom = Math.min(3, Math.max(0.25, Math.round((current + delta) * 20) / 20));
+            this._applyScale();
         }
 
         _esc(str) {

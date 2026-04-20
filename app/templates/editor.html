@@ -496,16 +496,33 @@
                     </svg>
                     Content exceeds one page. Reduce content or adjust typography.
                 </div>
-                <div class="page" id="resumePage">
-                    <p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>
-                    <div class="page-fill-indicator" id="pageFillIndicator" aria-label="Page fill">
-                        <div class="page-fill-track">
-                            <div class="page-fill-bar" id="pageFillBar"></div>
+                <div class="page-wrap" id="pageWrap">
+                    <div class="page" id="resumePage">
+                        <p class="preview-placeholder">Import a resume or fill in the fields on the left to get started.</p>
+                        <div class="page-fill-indicator" id="pageFillIndicator" aria-label="Page fill">
+                            <div class="page-fill-track">
+                                <div class="page-fill-bar" id="pageFillBar"></div>
+                            </div>
+                            <span class="page-fill-pct" id="pageFillPct"></span>
                         </div>
-                        <span class="page-fill-pct" id="pageFillPct"></span>
                     </div>
                 </div>
             </section>
+            <div class="zoom-controls" id="zoomControls" aria-label="Zoom controls">
+                <button class="zoom-btn" id="zoomOutBtn" aria-label="Zoom out" title="Zoom out (Ctrl+scroll down)">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <span class="zoom-level" id="zoomLevel">100%</span>
+                <button class="zoom-btn" id="zoomInBtn" aria-label="Zoom in" title="Zoom in (Ctrl+scroll up)">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="zoom-btn zoom-btn--fit" id="zoomFitBtn" aria-label="Fit to width" title="Fit to width">Fit</button>
+            </div>
         </main>
     </div>
 
