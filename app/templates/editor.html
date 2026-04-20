@@ -290,7 +290,7 @@
                         <label class="field-label" for="jobDescriptionInput">Paste job description</label>
                         <textarea class="field-input field-textarea jm-textarea" id="jobDescriptionInput" rows="8" placeholder="Paste the full job description here…"></textarea>
                     </div>
-                    <div class="ats-btn-wrap">
+                    <div class="ats-btn-wrap jm-btn-row">
                         <button class="ats-refresh-btn" id="analyzeJobMatchBtn">
                             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
                                 <circle cx="6.5" cy="6.5" r="5.75" stroke="currentColor" stroke-width="1.3"/>
@@ -298,6 +298,7 @@
                             </svg>
                             Analyze Match
                         </button>
+                        <button class="jm-clear-btn" id="clearJobMatchBtn">Clear</button>
                     </div>
                     <div id="jobMatchResults" hidden>
                         <div class="jm-score-wrap" id="jobMatchScoreWrap">
@@ -309,6 +310,7 @@
                         </div>
                         <div id="jobMatchMatched"></div>
                         <div id="jobMatchMissing"></div>
+                        <div id="jobMatchSuggestions"></div>
                     </div>
                 </div>
 
