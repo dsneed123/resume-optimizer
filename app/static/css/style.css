@@ -520,6 +520,13 @@ body {
     text-align: right;
 }
 
+/* Resume metadata (created / modified dates) */
+.resume-metadata {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
 /* Summary visibility toggle */
 .summary-toggle {
     display: inline-flex;

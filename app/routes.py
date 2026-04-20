@@ -9,6 +9,7 @@ from app.services.storage import (
     delete_resume,
     list_resumes,
     load_resume,
+    load_resume_full,
     save_resume,
 )
 
@@ -135,10 +136,17 @@ def new_resume():
 @bp.route('/api/resume/<resume_id>', methods=['GET'])
 def get_resume(resume_id):
     try:
-        data, typography = load_resume(resume_id)
+        payload = load_resume_full(resume_id)
     except FileNotFoundError:
         return jsonify({'error': 'Resume not found'}), 404
-    return jsonify({'id': resume_id, 'data': data, 'typography': typography})
+    return jsonify({
+        'id': resume_id,
+        'resume_name': payload.get('resume_name', ''),
+        'created_at': payload.get('created_at', ''),
+        'updated_at': payload.get('updated_at', ''),
+        'data': payload['data'],
+        'typography': payload['typography'],
+    })
 
 
 @bp.route('/api/resume/<resume_id>', methods=['POST'])
@@ -150,7 +158,8 @@ def update_resume(resume_id):
     typography = body.get('typography')
     if data is None or typography is None:
         return jsonify({'error': 'Body must include "data" and "typography"'}), 400
-    save_resume(resume_id, data, typography)
+    resume_name = body.get('resume_name', None)
+    save_resume(resume_id, data, typography, resume_name)
     return jsonify({'id': resume_id})
 
 
@@ -438,13 +447,15 @@ def export_docx_inline():
 @bp.route('/api/resume/<resume_id>/duplicate', methods=['POST'])
 def duplicate_resume(resume_id):
     try:
-        data, typography = load_resume(resume_id)
+        payload = load_resume_full(resume_id)
     except FileNotFoundError:
         return jsonify({'error': 'Resume not found'}), 404
     new_id = create_new_resume()
-    save_resume(new_id, data, typography)
-    name = data.get('header', {}).get('name', '')
-    return jsonify({'id': new_id, 'name': name}), 201
+    existing_name = payload.get('resume_name', '')
+    new_resume_name = (existing_name + ' (Copy)') if existing_name else ''
+    save_resume(new_id, payload['data'], payload['typography'], new_resume_name)
+    name = payload['data'].get('header', {}).get('name', '')
+    return jsonify({'id': new_id, 'name': name, 'resume_name': new_resume_name}), 201
 
 
 @bp.route('/api/resume/<resume_id>', methods=['DELETE'])
