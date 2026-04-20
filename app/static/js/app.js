@@ -4197,9 +4197,215 @@
         });
     }
 
+    // ── My Resumes modal ─────────────────────────
+    var myResumesBtn   = document.getElementById('myResumesBtn');
+    var resumesModal   = document.getElementById('resumesModal');
+    var resumesModalClose = document.getElementById('resumesModalClose');
+    var resumesModalBody  = document.getElementById('resumesModalBody');
+    var resumesNewBtn  = document.getElementById('resumesNewBtn');
+
+    function openResumesModal() {
+        if (resumesModal) resumesModal.hidden = false;
+        loadResumesList();
+    }
+
+    function closeResumesModal() {
+        if (resumesModal) resumesModal.hidden = true;
+    }
+
+    function _formatResumeDate(isoStr) {
+        if (!isoStr) return '';
+        try {
+            var d = new Date(isoStr);
+            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch (e) { return ''; }
+    }
+
+    function loadResumesList() {
+        if (!resumesModalBody) return;
+        resumesModalBody.innerHTML = '<div class="resumes-loading">Loading\u2026</div>';
+        fetch('/api/resumes')
+            .then(function (r) { return r.json(); })
+            .then(function (resumes) {
+                if (!resumes.length) {
+                    resumesModalBody.innerHTML = '<div class="resumes-empty">No saved resumes yet. Create one below.</div>';
+                    return;
+                }
+                var html = '<div class="resumes-list">';
+                resumes.forEach(function (resume) {
+                    var name = resume.name || 'Untitled Resume';
+                    var date = _formatResumeDate(resume.updated_at);
+                    var fill = (resume.page_fill_pct !== null && resume.page_fill_pct !== undefined)
+                        ? resume.page_fill_pct + '%' : '\u2014';
+                    var fillClass = resume.page_fill_pct > 100
+                        ? 'fill-over'
+                        : (resume.page_fill_pct >= 80 ? 'fill-good' : 'fill-low');
+                    var isActive = resume.id === resumeId;
+                    html += '<div class="resume-card' + (isActive ? ' resume-card--active' : '') + '" data-id="' + escHtml(resume.id) + '">';
+                    html += '<div class="resume-card-info">';
+                    html += '<div class="resume-card-name">' + escHtml(name);
+                    if (isActive) html += ' <span class="resume-badge-current">current</span>';
+                    html += '</div>';
+                    html += '<div class="resume-card-meta">';
+                    html += '<span class="resume-meta-date">Modified ' + escHtml(date) + '</span>';
+                    html += '<span class="resume-meta-fill ' + fillClass + '">' + escHtml(fill) + ' page fill</span>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div class="resume-card-actions">';
+                    html += '<button class="resume-action-btn" data-action="open" data-id="' + escHtml(resume.id) + '">' + (isActive ? 'Editing' : 'Open') + '</button>';
+                    html += '<button class="resume-action-btn" data-action="duplicate" data-id="' + escHtml(resume.id) + '">Duplicate</button>';
+                    html += '<button class="resume-action-btn resume-action-btn--danger" data-action="delete" data-id="' + escHtml(resume.id) + '">Delete</button>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                resumesModalBody.innerHTML = html;
+            })
+            .catch(function () {
+                if (resumesModalBody) resumesModalBody.innerHTML = '<div class="resumes-error">Failed to load resumes.</div>';
+            });
+    }
+
+    function _loadResumeIntoEditor(id) {
+        fetch('/api/resume/' + id)
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res.data || !res.typography) throw new Error('bad response');
+                pushHistory();
+                resumeId = id;
+                state.data = res.data;
+                applyTypoToControls(res.typography);
+                lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+                expOpenStates.length = 0;
+                eduOpenStates.length = 0;
+                skillOpenStates.length = 0;
+                certOpenStates.length = 0;
+                projOpenStates.length = 0;
+                awardOpenStates.length = 0;
+                ['name','email','phone','location','linkedin','website'].forEach(function (f) {
+                    var el = document.getElementById(f);
+                    if (el) el.value = (state.data.header && state.data.header[f]) ? state.data.header[f] : '';
+                });
+                if (summaryEl) summaryEl.value = state.data.summary || '';
+                updateCharCount();
+                renderAllCustomSectionPanels();
+                renderSidebarNav();
+                renderExperienceList();
+                renderEducationList();
+                renderSkillList();
+                renderCertList();
+                renderProjectList();
+                renderAwardList();
+                notifyChange();
+                closeResumesModal();
+                var displayName = (res.data.header && res.data.header.name) ? res.data.header.name : 'Untitled';
+                showToast('Opened \u201c' + displayName + '\u201d', 'success');
+            })
+            .catch(function () {
+                showToast('Failed to load resume.', 'error');
+            });
+    }
+
+    function _resetEditorToNew(newId, newData) {
+        resumeId = newId;
+        state.data = newData || defaultData();
+        applyTypoToControls(state.typo);
+        expOpenStates.length = 0;
+        eduOpenStates.length = 0;
+        skillOpenStates.length = 0;
+        certOpenStates.length = 0;
+        projOpenStates.length = 0;
+        awardOpenStates.length = 0;
+        ['name','email','phone','location','linkedin','website'].forEach(function (f) {
+            var el = document.getElementById(f);
+            if (el) el.value = '';
+        });
+        if (summaryEl) summaryEl.value = '';
+        updateCharCount();
+        renderAllCustomSectionPanels();
+        renderSidebarNav();
+        renderExperienceList();
+        renderEducationList();
+        renderSkillList();
+        renderCertList();
+        renderProjectList();
+        renderAwardList();
+        notifyChange();
+        lastSavedSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+    }
+
+    if (resumesModalBody) {
+        resumesModalBody.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            var action = btn.dataset.action;
+            var id = btn.dataset.id;
+
+            if (action === 'open') {
+                if (id === resumeId) { closeResumesModal(); return; }
+                _loadResumeIntoEditor(id);
+            } else if (action === 'duplicate') {
+                fetch('/api/resume/' + id + '/duplicate', { method: 'POST' })
+                    .then(function (r) { return r.json(); })
+                    .then(function () {
+                        showToast('Resume duplicated.', 'success');
+                        loadResumesList();
+                    })
+                    .catch(function () { showToast('Failed to duplicate resume.', 'error'); });
+            } else if (action === 'delete') {
+                var card = btn.closest('.resume-card');
+                var cardName = card ? card.querySelector('.resume-card-name').textContent.replace('current', '').trim() : 'this resume';
+                confirmDialog({
+                    title: 'Delete Resume',
+                    message: 'Delete \u201c' + cardName + '\u201d? This cannot be undone.',
+                    confirmText: 'Delete',
+                    isDanger: true
+                }, function () {
+                    fetch('/api/resume/' + id, { method: 'DELETE' })
+                        .then(function (r) {
+                            if (!r.ok) throw new Error('delete failed');
+                            if (id === resumeId) {
+                                return fetch('/api/resume/new', { method: 'POST' })
+                                    .then(function (r2) { return r2.json(); })
+                                    .then(function (res) { _resetEditorToNew(res.id); });
+                            }
+                        })
+                        .then(function () {
+                            showToast('Resume deleted.', 'success');
+                            loadResumesList();
+                        })
+                        .catch(function () { showToast('Failed to delete resume.', 'error'); });
+                });
+            }
+        });
+    }
+
+    if (myResumesBtn) myResumesBtn.addEventListener('click', openResumesModal);
+    if (resumesModalClose) resumesModalClose.addEventListener('click', closeResumesModal);
+    if (resumesModal) {
+        resumesModal.addEventListener('click', function (e) {
+            if (e.target === resumesModal) closeResumesModal();
+        });
+    }
+
+    if (resumesNewBtn) {
+        resumesNewBtn.addEventListener('click', function () {
+            doSave();
+            fetch('/api/resume/new', { method: 'POST' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    _resetEditorToNew(res.id);
+                    closeResumesModal();
+                    showToast('New resume created.', 'success');
+                })
+                .catch(function () { showToast('Failed to create resume.', 'error'); });
+        });
+    }
+
     // ── Unified keyboard shortcuts ───────────────
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
+            if (resumesModal && !resumesModal.hidden) { closeResumesModal(); return; }
             if (importModal && !importModal.hidden) closeImportModal();
             if (exportMenu && !exportMenu.hidden) closeExportMenu();
             if (shortcutsPopover && !shortcutsPopover.hidden) closeShortcutsPopover();

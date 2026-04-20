@@ -435,6 +435,18 @@ def export_docx_inline():
     )
 
 
+@bp.route('/api/resume/<resume_id>/duplicate', methods=['POST'])
+def duplicate_resume(resume_id):
+    try:
+        data, typography = load_resume(resume_id)
+    except FileNotFoundError:
+        return jsonify({'error': 'Resume not found'}), 404
+    new_id = create_new_resume()
+    save_resume(new_id, data, typography)
+    name = data.get('header', {}).get('name', '')
+    return jsonify({'id': new_id, 'name': name}), 201
+
+
 @bp.route('/api/resume/<resume_id>', methods=['DELETE'])
 def remove_resume(resume_id):
     try:
