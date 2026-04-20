@@ -1945,6 +1945,13 @@ body {
     border-bottom-color: var(--accent);
 }
 
+/* Instructions hint above a textarea */
+.import-textarea-hint {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
 /* Paste text textarea */
 .import-textarea {
     width: 100%;

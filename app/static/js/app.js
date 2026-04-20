@@ -2691,11 +2691,14 @@
     var importCancelBtn = document.getElementById('importCancelBtn');
     var importModalClose = document.getElementById('importModalClose');
     var importBtn       = document.getElementById('importBtn');
-    var importTabFile   = document.getElementById('importTabFile');
-    var importTabText   = document.getElementById('importTabText');
-    var importPanelFile = document.getElementById('importPanelFile');
-    var importPanelText = document.getElementById('importPanelText');
-    var importTextarea  = document.getElementById('importTextarea');
+    var importTabFile        = document.getElementById('importTabFile');
+    var importTabText        = document.getElementById('importTabText');
+    var importTabLinkedIn    = document.getElementById('importTabLinkedIn');
+    var importPanelFile      = document.getElementById('importPanelFile');
+    var importPanelText      = document.getElementById('importPanelText');
+    var importPanelLinkedIn  = document.getElementById('importPanelLinkedIn');
+    var importTextarea       = document.getElementById('importTextarea');
+    var importLinkedInTextarea = document.getElementById('importLinkedInTextarea');
 
     var selectedFile = null;
     var importActiveTab = 'file';
@@ -2703,19 +2706,32 @@
     function switchImportTab(tab) {
         importActiveTab = tab;
         var isFile = tab === 'file';
+        var isText = tab === 'text';
+        var isLinkedIn = tab === 'linkedin';
         if (importTabFile) {
             importTabFile.classList.toggle('import-tab--active', isFile);
             importTabFile.setAttribute('aria-selected', isFile ? 'true' : 'false');
         }
         if (importTabText) {
-            importTabText.classList.toggle('import-tab--active', !isFile);
-            importTabText.setAttribute('aria-selected', isFile ? 'false' : 'true');
+            importTabText.classList.toggle('import-tab--active', isText);
+            importTabText.setAttribute('aria-selected', isText ? 'true' : 'false');
+        }
+        if (importTabLinkedIn) {
+            importTabLinkedIn.classList.toggle('import-tab--active', isLinkedIn);
+            importTabLinkedIn.setAttribute('aria-selected', isLinkedIn ? 'true' : 'false');
         }
         if (importPanelFile) importPanelFile.hidden = !isFile;
-        if (importPanelText) importPanelText.hidden = isFile;
+        if (importPanelText) importPanelText.hidden = !isText;
+        if (importPanelLinkedIn) importPanelLinkedIn.hidden = !isLinkedIn;
         if (importError) importError.hidden = true;
         if (importConfirmBtn) {
-            importConfirmBtn.disabled = isFile ? !selectedFile : !(importTextarea && importTextarea.value.trim());
+            if (isFile) {
+                importConfirmBtn.disabled = !selectedFile;
+            } else if (isText) {
+                importConfirmBtn.disabled = !(importTextarea && importTextarea.value.trim());
+            } else {
+                importConfirmBtn.disabled = !(importLinkedInTextarea && importLinkedInTextarea.value.trim());
+            }
         }
     }
 
@@ -2746,8 +2762,14 @@
             importTabText.classList.remove('import-tab--active');
             importTabText.setAttribute('aria-selected', 'false');
         }
+        if (importTabLinkedIn) {
+            importTabLinkedIn.classList.remove('import-tab--active');
+            importTabLinkedIn.setAttribute('aria-selected', 'false');
+        }
+        if (importLinkedInTextarea) importLinkedInTextarea.value = '';
         if (importPanelFile) importPanelFile.hidden = false;
         if (importPanelText) importPanelText.hidden = true;
+        if (importPanelLinkedIn) importPanelLinkedIn.hidden = true;
     }
 
     function formatBytes(bytes) {
@@ -2826,10 +2848,22 @@
         importTabText.addEventListener('click', function () { switchImportTab('text'); });
     }
 
+    if (importTabLinkedIn) {
+        importTabLinkedIn.addEventListener('click', function () { switchImportTab('linkedin'); });
+    }
+
     if (importTextarea) {
         importTextarea.addEventListener('input', function () {
             if (importActiveTab === 'text' && importConfirmBtn) {
                 importConfirmBtn.disabled = !importTextarea.value.trim();
+            }
+        });
+    }
+
+    if (importLinkedInTextarea) {
+        importLinkedInTextarea.addEventListener('input', function () {
+            if (importActiveTab === 'linkedin' && importConfirmBtn) {
+                importConfirmBtn.disabled = !importLinkedInTextarea.value.trim();
             }
         });
     }
@@ -2916,6 +2950,18 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text }),
+                });
+            } else if (importActiveTab === 'linkedin') {
+                var liText = importLinkedInTextarea ? importLinkedInTextarea.value : '';
+                if (!liText.trim()) {
+                    importConfirmBtn.disabled = false;
+                    if (importSpinner) importSpinner.hidden = true;
+                    return;
+                }
+                fetchPromise = fetch('/api/import/linkedin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: liText }),
                 });
             } else {
                 if (!selectedFile) {
