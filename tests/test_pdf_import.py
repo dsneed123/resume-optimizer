@@ -188,6 +188,51 @@ def test_parse_skills_block_plain():
     assert "Python" in skills[0]["items"]
 
 
+def test_parse_skills_block_plain_uses_general_category():
+    lines = ["Python, JavaScript, React"]
+    skills = _parse_skills_block(lines)
+    assert skills[0]["category"] == "General"
+
+
+def test_parse_skills_block_pipe_separated():
+    lines = ["Languages: Python | Go | TypeScript"]
+    skills = _parse_skills_block(lines)
+    assert len(skills) == 1
+    assert skills[0]["category"] == "Languages"
+    assert "Go" in skills[0]["items"]
+    assert "TypeScript" in skills[0]["items"]
+
+
+def test_parse_skills_block_bullet_points():
+    lines = ["• Python", "• JavaScript", "• React"]
+    skills = _parse_skills_block(lines)
+    assert len(skills) == 1
+    assert skills[0]["category"] == "General"
+    items = skills[0]["items"]
+    assert "Python" in items
+    assert "JavaScript" in items
+    assert "React" in items
+
+
+def test_parse_skills_block_multiple_uncategorized_merged():
+    lines = ["Python, Go", "React, Vue"]
+    skills = _parse_skills_block(lines)
+    assert len(skills) == 1
+    assert skills[0]["category"] == "General"
+    assert "Python" in skills[0]["items"]
+    assert "React" in skills[0]["items"]
+
+
+def test_parse_skills_block_tools_and_frameworks():
+    lines = ["Tools: Git, Docker", "Frameworks: Django, Flask"]
+    skills = _parse_skills_block(lines)
+    cats = {s["category"] for s in skills}
+    assert "Tools" in cats
+    assert "Frameworks" in cats
+    tools = next(s for s in skills if s["category"] == "Tools")
+    assert "Docker" in tools["items"]
+
+
 def test_parse_experience_block_with_dates():
     lines = [
         "Senior Engineer  |  Acme Corp  |  New York, NY  Jan 2020 - Present",

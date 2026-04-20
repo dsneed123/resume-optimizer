@@ -285,7 +285,7 @@ def _parse_skills_block(lines: list[str]) -> list[dict]:
             category = parts[0].strip()
             items_raw = parts[1].strip()
         else:
-            category = "Skills"
+            category = "General"
             items_raw = stripped
         items = [i.strip() for i in re.split(r'[,;|]', items_raw) if i.strip()]
         if items:
