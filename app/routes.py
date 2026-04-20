@@ -173,6 +173,33 @@ def _classify_suggestion(message: str, index: int) -> dict:
     return {'message': message, 'section': section, 'priority': priority}
 
 
+@bp.route('/api/resume/<resume_id>/page-check', methods=['GET'])
+def check_page(resume_id):
+    try:
+        data, typography = load_resume(resume_id)
+    except FileNotFoundError:
+        return jsonify({'error': 'Resume not found'}), 404
+
+    from app.services.page_fit import _render_page_count, calculate_content_height, fits_one_page
+
+    try:
+        page_count = _render_page_count(data, typography)
+        fits = page_count <= 1
+    except Exception:
+        fits = fits_one_page(data, typography)
+        page_count = 1 if fits else 2
+
+    available_height = (
+        792.0
+        - typography.get('margin_top', 0.5) * 72.0
+        - typography.get('margin_bottom', 0.5) * 72.0
+    )
+    content_height = calculate_content_height(data, typography)
+    content_height_pct = round(content_height / available_height * 100, 1)
+
+    return jsonify({'fits': fits, 'page_count': page_count, 'content_height_pct': content_height_pct})
+
+
 @bp.route('/api/resume/<resume_id>/auto-fit', methods=['POST'])
 def auto_fit_resume(resume_id):
     try:
