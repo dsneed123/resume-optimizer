@@ -103,15 +103,24 @@
 
   /* ── Bullets ── */
   ul.bullets {
-    list-style: disc;
+    list-style: none;
     padding-left: {{ typography.bullet_indent }}pt;
     margin-top: 2pt;
+    margin-bottom: 0;
   }
 
   ul.bullets li {
     font-size: {{ typography.font_size_body }}pt;
     line-height: {{ typography.line_height }};
-    margin-bottom: 1pt;
+    margin-bottom: {{ typography.paragraph_spacing / 2 }}pt;
+    padding-left: 1em;
+    text-indent: -1em;
+  }
+
+  ul.bullets li::before {
+    content: "\2022";
+    display: inline-block;
+    width: 1em;
   }
 
   /* ── Summary ── */
