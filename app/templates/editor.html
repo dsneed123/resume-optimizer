@@ -297,6 +297,50 @@
 
     <div class="toast" id="autoFitToast" aria-live="polite"></div>
 
+    <div class="modal-overlay" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="importModalTitle">Import Resume</h2>
+                <button class="modal-close" id="importModalClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="dropzone" id="importDropzone">
+                    <input type="file" id="importFileInput" accept=".pdf,.docx" class="dropzone-input">
+                    <svg class="dropzone-icon" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                        <rect x="8" y="6" width="24" height="28" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M14 20h12M20 14v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p class="dropzone-text">Drag &amp; drop your resume here</p>
+                    <p class="dropzone-subtext">PDF or DOCX &mdash; max 10 MB</p>
+                    <button type="button" class="dropzone-browse" id="importBrowseBtn">Browse files</button>
+                </div>
+                <div class="import-file-info" id="importFileInfo" hidden>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <div class="import-file-meta">
+                        <div class="import-file-name" id="importFileName"></div>
+                        <div class="import-file-size" id="importFileSize"></div>
+                    </div>
+                    <button type="button" class="import-file-clear" id="importFileClear" aria-label="Remove file">&times;</button>
+                </div>
+                <div class="import-error" id="importError" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn--cancel" id="importCancelBtn">Cancel</button>
+                <button type="button" class="modal-btn modal-btn--primary" id="importConfirmBtn" disabled>
+                    <span class="modal-btn-spinner" id="importSpinner" hidden>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="spin-icon" aria-hidden="true">
+                            <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="28" stroke-dashoffset="10"/>
+                        </svg>
+                    </span>
+                    Import
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

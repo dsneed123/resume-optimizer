@@ -1771,6 +1771,215 @@
         });
     }
 
+    // ── Import modal ─────────────────────────────
+    var importModal     = document.getElementById('importModal');
+    var importDropzone  = document.getElementById('importDropzone');
+    var importFileInput = document.getElementById('importFileInput');
+    var importBrowseBtn = document.getElementById('importBrowseBtn');
+    var importFileInfo  = document.getElementById('importFileInfo');
+    var importFileName  = document.getElementById('importFileName');
+    var importFileSize  = document.getElementById('importFileSize');
+    var importFileClear = document.getElementById('importFileClear');
+    var importError     = document.getElementById('importError');
+    var importConfirmBtn = document.getElementById('importConfirmBtn');
+    var importSpinner   = document.getElementById('importSpinner');
+    var importCancelBtn = document.getElementById('importCancelBtn');
+    var importModalClose = document.getElementById('importModalClose');
+    var importBtn       = document.getElementById('importBtn');
+
+    var selectedFile = null;
+
+    function openImportModal() {
+        resetImportModal();
+        if (importModal) importModal.hidden = false;
+    }
+
+    function closeImportModal() {
+        if (importModal) importModal.hidden = true;
+    }
+
+    function resetImportModal() {
+        selectedFile = null;
+        if (importFileInput) importFileInput.value = '';
+        if (importFileInfo) importFileInfo.hidden = true;
+        if (importError) importError.hidden = true;
+        if (importConfirmBtn) importConfirmBtn.disabled = true;
+        if (importSpinner) importSpinner.hidden = true;
+        if (importDropzone) importDropzone.classList.remove('drag-over');
+    }
+
+    function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function setSelectedFile(file) {
+        selectedFile = file;
+        if (importFileName) importFileName.textContent = file.name;
+        if (importFileSize) importFileSize.textContent = formatBytes(file.size);
+        if (importFileInfo) importFileInfo.hidden = false;
+        if (importError) importError.hidden = true;
+        if (importConfirmBtn) importConfirmBtn.disabled = false;
+    }
+
+    function showImportError(msg) {
+        if (importError) {
+            importError.textContent = msg;
+            importError.hidden = false;
+        }
+    }
+
+    function loadImportedData(data) {
+        var defaults = defaultData();
+        var merged = Object.assign(defaults, data);
+        if (!merged.section_order || !merged.section_order.length) {
+            merged.section_order = DEFAULT_SECTION_ORDER.slice();
+        }
+        Object.assign(state.data, merged);
+
+        expOpenStates.length = 0;
+        eduOpenStates.length = 0;
+        skillOpenStates.length = 0;
+        certOpenStates.length = 0;
+        projOpenStates.length = 0;
+        awardOpenStates.length = 0;
+
+        var h = state.data.header || {};
+        ['name','email','phone','location','linkedin','website'].forEach(function (f) {
+            var el = document.getElementById(f);
+            if (el) el.value = h[f] || '';
+        });
+
+        if (summaryEl) summaryEl.value = state.data.summary || '';
+        updateCharCount();
+
+        if (summaryVisibleEl) summaryVisibleEl.checked = !!state.data.show_summary;
+
+        var certsVisibleEl = document.getElementById('certsVisible');
+        if (certsVisibleEl) certsVisibleEl.checked = state.data.show_certifications !== false;
+
+        var projectsVisibleEl = document.getElementById('projectsVisible');
+        if (projectsVisibleEl) projectsVisibleEl.checked = state.data.show_projects !== false;
+
+        var awardsVisibleEl = document.getElementById('awardsVisible');
+        if (awardsVisibleEl) awardsVisibleEl.checked = state.data.show_awards !== false;
+
+        renderSidebarNav();
+        renderExperienceList();
+        renderEducationList();
+        renderSkillList();
+        renderCertList();
+        renderProjectList();
+        renderAwardList();
+        notifyChange();
+    }
+
+    if (importBtn) {
+        importBtn.addEventListener('click', openImportModal);
+    }
+
+    if (importModalClose) importModalClose.addEventListener('click', closeImportModal);
+    if (importCancelBtn) importCancelBtn.addEventListener('click', closeImportModal);
+
+    if (importModal) {
+        importModal.addEventListener('click', function (e) {
+            if (e.target === importModal) closeImportModal();
+        });
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && importModal && !importModal.hidden) closeImportModal();
+    });
+
+    if (importBrowseBtn) {
+        importBrowseBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (importFileInput) importFileInput.click();
+        });
+    }
+
+    if (importFileInput) {
+        importFileInput.addEventListener('change', function () {
+            var file = importFileInput.files && importFileInput.files[0];
+            if (file) setSelectedFile(file);
+        });
+    }
+
+    if (importFileClear) {
+        importFileClear.addEventListener('click', function () {
+            selectedFile = null;
+            if (importFileInput) importFileInput.value = '';
+            if (importFileInfo) importFileInfo.hidden = true;
+            if (importError) importError.hidden = true;
+            if (importConfirmBtn) importConfirmBtn.disabled = true;
+        });
+    }
+
+    if (importDropzone) {
+        importDropzone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            importDropzone.classList.add('drag-over');
+        });
+
+        importDropzone.addEventListener('dragleave', function (e) {
+            if (!importDropzone.contains(e.relatedTarget)) {
+                importDropzone.classList.remove('drag-over');
+            }
+        });
+
+        importDropzone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            importDropzone.classList.remove('drag-over');
+            var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            if (file) {
+                var ext = file.name.split('.').pop().toLowerCase();
+                if (ext !== 'pdf' && ext !== 'docx') {
+                    showImportError('Unsupported file type. Please upload a PDF or DOCX file.');
+                    return;
+                }
+                setSelectedFile(file);
+            }
+        });
+    }
+
+    if (importConfirmBtn) {
+        importConfirmBtn.addEventListener('click', function () {
+            if (!selectedFile) return;
+
+            importConfirmBtn.disabled = true;
+            if (importSpinner) importSpinner.hidden = false;
+            if (importError) importError.hidden = true;
+
+            var formData = new FormData();
+            formData.append('file', selectedFile);
+
+            fetch('/api/import', { method: 'POST', body: formData })
+                .then(function (r) {
+                    return r.json().then(function (body) {
+                        return { ok: r.ok, status: r.status, body: body };
+                    });
+                })
+                .then(function (res) {
+                    if (importSpinner) importSpinner.hidden = true;
+                    if (!res.ok) {
+                        showImportError(res.body.error || 'Import failed. Please try again.');
+                        importConfirmBtn.disabled = false;
+                        return;
+                    }
+                    loadImportedData(res.body.data);
+                    closeImportModal();
+                    showAutoFitToast('Resume imported successfully.');
+                })
+                .catch(function () {
+                    if (importSpinner) importSpinner.hidden = true;
+                    showImportError('Network error. Please check your connection and try again.');
+                    importConfirmBtn.disabled = false;
+                });
+        });
+    }
+
+    // ── Auto-fit button ──────────────────────────
     if (autoFitBtn) {
         autoFitBtn.addEventListener('click', function () {
             autoFitBtn.disabled = true;
