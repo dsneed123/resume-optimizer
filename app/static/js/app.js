@@ -827,8 +827,8 @@
         var activeBtn = nav.querySelector('.sidebar-nav-btn.active');
         var activeSection = activeBtn ? activeBtn.dataset.section : 'header';
 
-        // Remove all non-contact, non-typography buttons
-        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"]):not([data-section="typography"]):not([data-section="ats"])')).forEach(function (b) {
+        // Remove all non-contact, non-typography, non-ats, non-job-match buttons
+        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"]):not([data-section="typography"]):not([data-section="ats"]):not([data-section="job-match"])')).forEach(function (b) {
             nav.removeChild(b);
         });
 
@@ -3296,6 +3296,99 @@
 
     if (refreshAtsBtnEl) {
         refreshAtsBtnEl.addEventListener('click', fetchAtsScore);
+    }
+
+    // ── Job Match Panel ───────────────────────────
+    var jobDescInputEl      = document.getElementById('jobDescriptionInput');
+    var analyzeJobMatchBtnEl = document.getElementById('analyzeJobMatchBtn');
+    var jobMatchResultsEl   = document.getElementById('jobMatchResults');
+    var jobMatchScoreNumEl  = document.getElementById('jobMatchScoreNumber');
+    var jobMatchScoreLblEl  = document.getElementById('jobMatchScoreLabel');
+    var jobMatchScoreBarEl  = document.getElementById('jobMatchScoreBar');
+    var jobMatchMatchedEl   = document.getElementById('jobMatchMatched');
+    var jobMatchMissingEl   = document.getElementById('jobMatchMissing');
+
+    var JM_CHECK_ICON =
+        '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">' +
+        '<circle cx="5.5" cy="5.5" r="5" fill="#22c55e"/>' +
+        '<path d="M3 5.5l2 2 3-3" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+
+    var JM_MISS_ICON =
+        '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">' +
+        '<circle cx="5.5" cy="5.5" r="5" fill="#ef4444"/>' +
+        '<path d="M3.5 3.5l4 4M7.5 3.5l-4 4" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>' +
+        '</svg>';
+
+    function fetchJobMatch() {
+        var jd = jobDescInputEl ? jobDescInputEl.value.trim() : '';
+        if (!jd) return;
+        if (analyzeJobMatchBtnEl) analyzeJobMatchBtnEl.disabled = true;
+        fetch('/api/resume/job-match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: state.data, job_description: jd })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (result) {
+            renderJobMatch(result);
+            if (analyzeJobMatchBtnEl) analyzeJobMatchBtnEl.disabled = false;
+        })
+        .catch(function () {
+            if (analyzeJobMatchBtnEl) analyzeJobMatchBtnEl.disabled = false;
+        });
+    }
+
+    function renderJobMatch(result) {
+        var pct = typeof result.match_percentage === 'number' ? result.match_percentage : 0;
+        if (jobMatchScoreNumEl) jobMatchScoreNumEl.textContent = pct + '%';
+        if (jobMatchScoreLblEl) {
+            jobMatchScoreLblEl.textContent = pct >= 75 ? 'Strong Match' : pct >= 50 ? 'Partial Match' : 'Low Match';
+        }
+        if (jobMatchScoreBarEl) {
+            jobMatchScoreBarEl.style.width = pct + '%';
+            jobMatchScoreBarEl.className = 'jm-score-bar-fill' +
+                (pct >= 75 ? ' jm-bar--green' : pct >= 50 ? ' jm-bar--yellow' : ' jm-bar--red');
+        }
+
+        var matched = result.matched_keywords || [];
+        var missing = result.missing_keywords || [];
+
+        if (jobMatchMatchedEl) {
+            if (matched.length > 0) {
+                jobMatchMatchedEl.innerHTML =
+                    '<div class="ats-list-title">Matched Keywords (' + matched.length + ')</div>' +
+                    '<div class="jm-chips">' +
+                    matched.map(function (m) {
+                        return '<span class="jm-chip jm-chip--match" title="Found in: ' + escHtml(m.locations.join(', ')) + '">' +
+                            JM_CHECK_ICON + ' ' + escHtml(m.keyword) + '</span>';
+                    }).join('') +
+                    '</div>';
+            } else {
+                jobMatchMatchedEl.innerHTML = '<p class="ats-empty">No keywords matched.</p>';
+            }
+        }
+
+        if (jobMatchMissingEl) {
+            if (missing.length > 0) {
+                jobMatchMissingEl.innerHTML =
+                    '<div class="ats-list-title">Missing Keywords (' + missing.length + ')</div>' +
+                    missing.map(function (m) {
+                        return '<div class="ats-item jm-missing-item">' +
+                            '<span class="ats-item-icon jm-miss-icon">' + JM_MISS_ICON + '</span>' +
+                            '<span><strong>' + escHtml(m.keyword) + '</strong> — ' + escHtml(m.suggestion) + '</span>' +
+                            '</div>';
+                    }).join('');
+            } else {
+                jobMatchMissingEl.innerHTML = '<p class="ats-empty">All keywords found!</p>';
+            }
+        }
+
+        if (jobMatchResultsEl) jobMatchResultsEl.hidden = false;
+    }
+
+    if (analyzeJobMatchBtnEl) {
+        analyzeJobMatchBtnEl.addEventListener('click', fetchJobMatch);
     }
 
     // ── Unified keyboard shortcuts ───────────────

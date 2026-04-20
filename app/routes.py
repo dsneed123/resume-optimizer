@@ -274,6 +274,24 @@ def _classify_suggestion(message: str, index: int) -> dict:
     return {'message': message, 'section': section, 'priority': priority}
 
 
+@bp.route('/api/resume/job-match', methods=['POST'])
+def job_match_inline():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
+    data = body.get('data')
+    job_description = body.get('job_description')
+    if data is None:
+        return jsonify({'error': 'Body must include "data"'}), 400
+    if not isinstance(job_description, str):
+        return jsonify({'error': 'Body must include "job_description" string'}), 400
+
+    from app.services.job_match import analyze_job_match
+
+    result = analyze_job_match(data, job_description)
+    return jsonify(result)
+
+
 @bp.route('/api/resume/page-check', methods=['POST'])
 def check_page_inline():
     body = request.get_json(silent=True)
