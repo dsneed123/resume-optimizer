@@ -1371,6 +1371,50 @@ body {
     white-space: nowrap;
 }
 
+.page-fill-pct--overflow {
+    color: #ef4444;
+    font-weight: 700;
+}
+
+/* Page overflow boundary line */
+.page--overflow::after {
+    content: '';
+    position: absolute;
+    top: 1056px;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 2px dashed #ef4444;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Overflow warning banner */
+.overflow-warning {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    color: #b91c1c;
+    font-size: 12px;
+    font-family: sans-serif;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    max-width: var(--page-w, 816px);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.overflow-warning.visible {
+    display: flex;
+}
+
+.overflow-warning svg {
+    flex-shrink: 0;
+}
+
 /* Auto-fit button */
 .auto-fit-btn {
     width: 100%;
@@ -1386,7 +1430,7 @@ body {
     align-items: center;
     gap: 6px;
     justify-content: center;
-    transition: background 0.15s, opacity 0.15s;
+    transition: background 0.15s, opacity 0.15s, box-shadow 0.15s;
 }
 
 .auto-fit-btn:hover:not(:disabled) {
@@ -1396,6 +1440,20 @@ body {
 .auto-fit-btn:disabled {
     opacity: 0.45;
     cursor: default;
+}
+
+@keyframes auto-fit-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); background: #ef4444; }
+    50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); background: #dc2626; }
+}
+
+.auto-fit-btn--overflow {
+    background: #ef4444;
+    animation: auto-fit-pulse 1.6s ease-in-out infinite;
+}
+
+.auto-fit-btn--overflow:hover:not(:disabled) {
+    background: #dc2626;
 }
 
 /* Import modal */

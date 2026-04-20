@@ -1876,6 +1876,8 @@
     var pageFillIndicatorEl = document.getElementById('pageFillIndicator');
     var pageFillBarEl = document.getElementById('pageFillBar');
     var pageFillPctEl = document.getElementById('pageFillPct');
+    var overflowWarningEl = document.getElementById('overflowWarning');
+    var resumePageEl = document.getElementById('resumePage');
 
     function updatePageFillIndicator(pct) {
         if (!pageFillBarEl || !pageFillPctEl || !pageFillIndicatorEl) return;
@@ -1883,8 +1885,10 @@
         pageFillBarEl.style.height = clamped + '%';
         pageFillPctEl.textContent = Math.round(pct) + '%';
         pageFillBarEl.className = 'page-fill-bar';
+        pageFillPctEl.className = 'page-fill-pct';
         if (pct >= 100) {
             pageFillBarEl.classList.add('page-fill-bar--red');
+            pageFillPctEl.classList.add('page-fill-pct--overflow');
         } else if (pct >= 90) {
             pageFillBarEl.classList.add('page-fill-bar--yellow');
         }
@@ -1918,7 +1922,28 @@
     var autoFitToastTimer = null;
 
     function updateAutoFitBtnState(fits) {
-        if (autoFitBtn) autoFitBtn.disabled = fits;
+        if (autoFitBtn) {
+            autoFitBtn.disabled = fits;
+            if (fits) {
+                autoFitBtn.classList.remove('auto-fit-btn--overflow');
+            } else {
+                autoFitBtn.classList.add('auto-fit-btn--overflow');
+            }
+        }
+        if (overflowWarningEl) {
+            if (fits) {
+                overflowWarningEl.classList.remove('visible');
+            } else {
+                overflowWarningEl.classList.add('visible');
+            }
+        }
+        if (resumePageEl) {
+            if (fits) {
+                resumePageEl.classList.remove('page--overflow');
+            } else {
+                resumePageEl.classList.add('page--overflow');
+            }
+        }
     }
 
     function showAutoFitToast(message) {
