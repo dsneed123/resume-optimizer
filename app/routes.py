@@ -85,11 +85,11 @@ def import_resume():
     mimetype = file.mimetype or ''
 
     if ext not in _ALLOWED_EXTENSIONS and mimetype not in _ALLOWED_MIMETYPES:
-        return jsonify({'error': 'Unsupported file type; must be PDF or DOCX'}), 400
+        return jsonify({'error': 'Unsupported file type; must be PDF or DOCX'}), 415
 
     file_bytes = file.read()
     if len(file_bytes) > _MAX_IMPORT_BYTES:
-        return jsonify({'error': 'File exceeds 10 MB limit'}), 400
+        return jsonify({'error': 'File exceeds 10 MB limit'}), 413
 
     is_pdf = ext == 'pdf' or mimetype == 'application/pdf'
 
