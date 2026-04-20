@@ -7,6 +7,7 @@ try:
 except ImportError:
     _DOCX_AVAILABLE = False
 
+from app.services.pdf_import import CorruptedFileError, EmptyFileError
 from app.services.docx_import import (
     import_docx,
     _classify_section,
@@ -356,18 +357,15 @@ def test_fallback_resume_empty_text():
 
 
 @docx_required
-def test_import_docx_bad_bytes_returns_fallback():
-    result = import_docx(b"not a docx file")
-    assert isinstance(result, dict)
-    assert "header" in result
-    assert "experience" in result
+def test_import_docx_bad_bytes_raises_corrupted():
+    with pytest.raises(CorruptedFileError):
+        import_docx(b"not a docx file")
 
 
 @docx_required
-def test_import_docx_empty_bytes_returns_fallback():
-    result = import_docx(b"")
-    assert isinstance(result, dict)
-    assert result["experience"] == []
+def test_import_docx_empty_bytes_raises_empty():
+    with pytest.raises(EmptyFileError):
+        import_docx(b"")
 
 
 @docx_required

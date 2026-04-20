@@ -1897,6 +1897,34 @@ body {
     display: none;
 }
 
+.import-error-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    color: #dc2626;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.import-error-link:hover {
+    color: #b91c1c;
+}
+
+.import-progress {
+    padding: 10px 12px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #0369a1;
+}
+
+.import-progress[hidden] {
+    display: none;
+}
+
 /* Spinner */
 .modal-btn-spinner {
     display: inline-flex;
