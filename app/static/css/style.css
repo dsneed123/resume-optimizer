@@ -385,6 +385,58 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+}
+
+.section-header-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+}
+
+.section-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.section-chevron svg {
+    transition: transform 0.2s ease;
+}
+
+.sidebar-section.section-collapsed .section-chevron svg {
+    transform: rotate(-90deg);
+}
+
+.section-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6b7280;
+    background: #f3f4f6;
+    border-radius: 10px;
+    padding: 1px 6px;
+    white-space: nowrap;
+}
+
+.section-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+    max-height: 5000px;
+    transition: max-height 0.3s ease;
+}
+
+.sidebar-section.section-collapsed .section-body {
+    max-height: 0;
+}
+
+.sidebar-section.section-collapsed {
+    gap: 0;
 }
 
 .section-title {
