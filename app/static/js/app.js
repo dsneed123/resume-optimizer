@@ -48,6 +48,12 @@
 
         _applyTypography() {
             const t = this.typo;
+            const layout = t.header_layout || 'centered';
+            const headerLayoutCSS = layout === 'left-aligned'
+                ? 'display: flex; justify-content: space-between; align-items: baseline;'
+                : layout === 'two-line'
+                ? 'text-align: left;'
+                : 'text-align: center;';
             this._styleEl.textContent = `
                 #resumePage {
                     padding: ${t.margin_top}in ${t.margin_right}in ${t.margin_bottom}in ${t.margin_left}in;
@@ -57,7 +63,7 @@
                     color: #000;
                 }
                 #resumePage .rv-header {
-                    text-align: center;
+                    ${headerLayoutCSS}
                     margin-bottom: 4pt;
                 }
                 #resumePage .rv-name {
@@ -441,6 +447,7 @@
             margin_right: 0.6,
             bullet_indent: 12,
             date_format: 'MMM YYYY',
+            header_layout: 'centered',
         };
     }
 
@@ -1864,6 +1871,21 @@
         });
     }
 
+    var headerLayoutOptionsEl = document.getElementById('headerLayoutOptions');
+    if (headerLayoutOptionsEl) {
+        var activeLayout = state.typo.header_layout || 'centered';
+        headerLayoutOptionsEl.querySelectorAll('.layout-option').forEach(function (btn) {
+            if (btn.dataset.layout === activeLayout) btn.classList.add('active');
+            else btn.classList.remove('active');
+            btn.addEventListener('click', function () {
+                headerLayoutOptionsEl.querySelectorAll('.layout-option').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                state.typo.header_layout = btn.dataset.layout;
+                notifyChange();
+            });
+        });
+    }
+
     var typoSizeNameSlider = document.getElementById('typoSizeName');
     var typoSizeNameNum = document.getElementById('typoSizeNameNum');
     if (typoSizeNameSlider && typoSizeNameNum) {
@@ -2017,6 +2039,13 @@
 
         var dateFormatEl = document.getElementById('typoDateFormat');
         if (dateFormatEl && typo.date_format) dateFormatEl.value = typo.date_format;
+
+        var layoutOptionsEl = document.getElementById('headerLayoutOptions');
+        if (layoutOptionsEl && typo.header_layout) {
+            layoutOptionsEl.querySelectorAll('.layout-option').forEach(function (btn) {
+                btn.classList.toggle('active', btn.dataset.layout === typo.header_layout);
+            });
+        }
 
         var sizeNameSlider = document.getElementById('typoSizeName');
         var sizeNameNum = document.getElementById('typoSizeNameNum');

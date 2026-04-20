@@ -26,7 +26,15 @@
 
   /* ── Header ── */
   .header {
+    {% if typography.header_layout == 'left-aligned' %}
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    {% elif typography.header_layout == 'two-line' %}
+    text-align: left;
+    {% else %}
     text-align: center;
+    {% endif %}
     margin-bottom: 4pt;
   }
 
