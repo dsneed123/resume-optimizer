@@ -192,7 +192,7 @@
             html += '</div></div>';
 
             // Summary
-            if (d.summary) {
+            if (d.summary && d.show_summary !== false) {
                 html += '<div class="rv-section">';
                 html += '<div class="rv-section-title">Summary</div>';
                 html += `<div>${this._esc(d.summary)}</div>`;
@@ -327,6 +327,7 @@
         return {
             header: { name: '', email: '', phone: '', location: '', linkedin: '', website: '' },
             summary: '',
+            show_summary: true,
             experience: [],
             education: [],
             skills: [],
@@ -388,4 +389,24 @@
     bindField('linkedin', 'header.linkedin');
     bindField('website', 'header.website');
     bindField('summary', 'summary');
+
+    // ── Summary char count + visibility toggle ───
+    const summaryEl = document.getElementById('summary');
+    const charCountEl = document.getElementById('summaryCharCount');
+    const summaryVisibleEl = document.getElementById('summaryVisible');
+
+    function updateCharCount() {
+        if (!charCountEl || !summaryEl) return;
+        const len = summaryEl.value.length;
+        charCountEl.textContent = len === 1 ? '1 character' : `${len} characters`;
+    }
+
+    if (summaryEl) summaryEl.addEventListener('input', updateCharCount);
+
+    if (summaryVisibleEl) {
+        summaryVisibleEl.addEventListener('change', function () {
+            state.data.show_summary = summaryVisibleEl.checked;
+            notifyChange();
+        });
+    }
 })();

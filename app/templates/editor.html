@@ -85,10 +85,15 @@
                 <div class="sidebar-section" id="section-summary">
                     <div class="section-header">
                         <h2 class="section-title">Professional Summary</h2>
+                        <label class="summary-toggle" title="Show on resume">
+                            <input type="checkbox" id="summaryVisible" checked>
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
                     </div>
                     <div class="field-group">
-                        <label class="field-label" for="summary">Summary</label>
-                        <textarea class="field-input field-textarea" id="summary" rows="5" placeholder="Brief professional summary..."></textarea>
+                        <label class="field-label" for="summary">Summary (2–4 sentences)</label>
+                        <textarea class="field-input field-textarea" id="summary" rows="6" placeholder="Results-driven professional with X years of experience in..."></textarea>
+                        <div class="char-count" id="summaryCharCount">0 characters</div>
                     </div>
                 </div>
 
