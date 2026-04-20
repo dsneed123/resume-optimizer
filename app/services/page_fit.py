@@ -141,7 +141,7 @@ def _render_page_count(resume_data: dict, typography: dict) -> int:
     from weasyprint import HTML  # lazy import — system libs may not be present
     data = _dict_to_ns(resume_data)
     t = _dict_to_ns(typography)
-    html_str = render_template("pdf_resume.html", data=data, t=t)
+    html_str = render_template("pdf_resume.html", data=data, typography=t)
     document = HTML(string=html_str).render()
     return len(document.pages)
 

@@ -18,7 +18,7 @@ def export_pdf(resume_data: dict, typography: dict) -> bytes:
     data = _dict_to_ns(resume_data)
     t = _dict_to_ns(typography)
 
-    html_str = render_template("pdf_resume.html", data=data, t=t)
+    html_str = render_template("pdf_resume.html", data=data, typography=t)
 
     pdf_bytes = HTML(string=html_str).write_pdf()
     return pdf_bytes
