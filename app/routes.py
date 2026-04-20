@@ -173,6 +173,30 @@ def _classify_suggestion(message: str, index: int) -> dict:
     return {'message': message, 'section': section, 'priority': priority}
 
 
+@bp.route('/api/resume/page-check', methods=['POST'])
+def check_page_inline():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
+    data = body.get('data')
+    typography = body.get('typography')
+    if data is None or typography is None:
+        return jsonify({'error': 'Body must include "data" and "typography"'}), 400
+
+    from app.services.page_fit import calculate_content_height, fits_one_page
+
+    fits = fits_one_page(data, typography)
+    available_height = (
+        792.0
+        - typography.get('margin_top', 0.5) * 72.0
+        - typography.get('margin_bottom', 0.5) * 72.0
+    )
+    content_height = calculate_content_height(data, typography)
+    content_height_pct = round(content_height / available_height * 100, 1)
+
+    return jsonify({'fits': fits, 'content_height_pct': content_height_pct})
+
+
 @bp.route('/api/resume/<resume_id>/page-check', methods=['GET'])
 def check_page(resume_id):
     try:
