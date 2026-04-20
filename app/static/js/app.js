@@ -70,6 +70,18 @@
     if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
+    // Auto-close sidebar when viewport grows past the mobile breakpoint
+    var mql = window.matchMedia('(min-width: 1025px)');
+    function onBreakpointChange(e) { if (e.matches) closeSidebar(); }
+    if (mql.addEventListener) {
+        mql.addEventListener('change', onBreakpointChange);
+    } else {
+        mql.addListener(onBreakpointChange); // Safari <14 fallback
+    }
+
+    // Expose closeSidebar for use in nav click handler
+    window._closeSidebar = closeSidebar;
+
     // ── Section tab navigation (dynamic — see renderSidebarNav below) ───
 
     // ── ResumePreview ────────────────────────────
@@ -323,6 +335,45 @@
                 e.preventDefault();
                 this._adjustZoom(e.deltaY > 0 ? -0.1 : 0.1);
             }, { passive: false });
+
+            this._initPinchZoom();
+        }
+
+        _initPinchZoom() {
+            let startDist = null;
+            let startZoom = null;
+
+            const getTouchDist = (t) => {
+                const dx = t[0].clientX - t[1].clientX;
+                const dy = t[0].clientY - t[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            };
+
+            this.preview.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    startDist = getTouchDist(e.touches);
+                    const PAGE_W = 816;
+                    const available = this.preview.clientWidth - 64;
+                    const autoFit = (available > 0 && available < PAGE_W) ? available / PAGE_W : 1;
+                    startZoom = this._zoom !== null ? this._zoom : autoFit;
+                }
+            }, { passive: true });
+
+            this.preview.addEventListener('touchmove', (e) => {
+                if (e.touches.length !== 2 || startDist === null) return;
+                e.preventDefault();
+                const dist = getTouchDist(e.touches);
+                const ratio = dist / startDist;
+                this._zoom = Math.min(2, Math.max(0.5, Math.round(startZoom * ratio * 20) / 20));
+                this._applyScale();
+            }, { passive: false });
+
+            this.preview.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    startDist = null;
+                    startZoom = null;
+                }
+            }, { passive: true });
         }
 
         _adjustZoom(delta) {
@@ -1122,6 +1173,8 @@
                 btn.classList.add('active');
                 var target = document.getElementById('section-' + btn.dataset.section);
                 if (target) target.classList.add('active');
+                // Close sidebar on mobile after selecting a section
+                if (window.innerWidth <= 1024 && window._closeSidebar) window._closeSidebar();
             });
         });
     }
