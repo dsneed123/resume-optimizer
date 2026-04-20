@@ -717,6 +717,7 @@
         preview.update(state.data, state.typo);
         schedulePageCheck();
         scheduleSave();
+        scheduleAtsRefresh();
     }
 
     // ── Undo/Redo History ────────────────────────
@@ -827,7 +828,7 @@
         var activeSection = activeBtn ? activeBtn.dataset.section : 'header';
 
         // Remove all non-contact, non-typography buttons
-        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"]):not([data-section="typography"])')).forEach(function (b) {
+        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"]):not([data-section="typography"]):not([data-section="ats"])')).forEach(function (b) {
             nav.removeChild(b);
         });
 
@@ -3180,6 +3181,121 @@
                 showAutoFitToast('Auto-fit failed. Please try again.');
             });
         });
+    }
+
+    // ── ATS Score Panel ──────────────────────────
+    var atsScoreTimer = null;
+    var atsGaugeWrapEl  = document.getElementById('atsGaugeWrap');
+    var atsGaugeFillEl  = document.getElementById('atsGaugeFill');
+    var atsScoreNumEl   = document.getElementById('atsScoreNumber');
+    var atsScoreLblEl   = document.getElementById('atsScoreLabel');
+    var atsIssuesEl     = document.getElementById('atsIssuesList');
+    var atsSuggestionsEl = document.getElementById('atsSuggestionsList');
+    var refreshAtsBtnEl  = document.getElementById('refreshAtsBtn');
+
+    var ATS_CIRCUMFERENCE = 2 * Math.PI * 40; // ≈ 251.33
+
+    var ATS_ERROR_ICON =
+        '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">' +
+        '<circle cx="6.5" cy="6.5" r="5.75" stroke="currentColor" stroke-width="1.3"/>' +
+        '<path d="M6.5 4v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<circle cx="6.5" cy="9" r="0.65" fill="currentColor"/>' +
+        '</svg>';
+
+    var ATS_WARNING_ICON =
+        '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">' +
+        '<path d="M6.5 1.5L12 11H1L6.5 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>' +
+        '<path d="M6.5 5v2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<circle cx="6.5" cy="9.5" r="0.65" fill="currentColor"/>' +
+        '</svg>';
+
+    var ATS_SUGGEST_ICON =
+        '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">' +
+        '<circle cx="6.5" cy="6.5" r="5.75" stroke="currentColor" stroke-width="1.3"/>' +
+        '<path d="M6.5 3.5v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<circle cx="6.5" cy="9.5" r="0.65" fill="currentColor"/>' +
+        '</svg>';
+
+    function scheduleAtsRefresh() {
+        clearTimeout(atsScoreTimer);
+        atsScoreTimer = setTimeout(fetchAtsScore, 2000);
+    }
+
+    function fetchAtsScore() {
+        if (refreshAtsBtnEl) refreshAtsBtnEl.disabled = true;
+        fetch('/api/resume/ats-score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: state.data })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (result) {
+            renderAtsScore(result);
+            if (refreshAtsBtnEl) refreshAtsBtnEl.disabled = false;
+        })
+        .catch(function () {
+            if (refreshAtsBtnEl) refreshAtsBtnEl.disabled = false;
+        });
+    }
+
+    function renderAtsScore(result) {
+        var score = typeof result.score === 'number' ? result.score : 0;
+
+        if (atsScoreNumEl) atsScoreNumEl.textContent = score;
+
+        if (atsGaugeFillEl) {
+            var filled = (score / 100) * ATS_CIRCUMFERENCE;
+            atsGaugeFillEl.style.strokeDashoffset = String(ATS_CIRCUMFERENCE - filled);
+        }
+
+        var colorClass, label;
+        if (score >= 75) {
+            colorClass = 'ats-gauge-wrap--green';
+            label = 'Good';
+        } else if (score >= 50) {
+            colorClass = 'ats-gauge-wrap--yellow';
+            label = 'Fair';
+        } else {
+            colorClass = 'ats-gauge-wrap--red';
+            label = 'Needs Work';
+        }
+        if (atsGaugeWrapEl) atsGaugeWrapEl.className = 'ats-gauge-wrap ' + colorClass;
+        if (atsScoreLblEl) atsScoreLblEl.textContent = label;
+
+        if (atsIssuesEl) {
+            var issues = result.issues || [];
+            if (issues.length === 0) {
+                atsIssuesEl.innerHTML = '<p class="ats-empty">No issues found.</p>';
+            } else {
+                atsIssuesEl.innerHTML = '<div class="ats-list-title">Issues</div>' +
+                    issues.map(function (issue) {
+                        var icon = issue.severity === 'error' ? ATS_ERROR_ICON : ATS_WARNING_ICON;
+                        return '<div class="ats-item ats-item--' + escHtml(issue.severity) + '">' +
+                            '<span class="ats-item-icon">' + icon + '</span>' +
+                            '<span>' + escHtml(issue.message) + '</span>' +
+                            '</div>';
+                    }).join('');
+            }
+        }
+
+        if (atsSuggestionsEl) {
+            var suggestions = result.suggestions || [];
+            if (suggestions.length > 0) {
+                atsSuggestionsEl.innerHTML = '<div class="ats-list-title">Suggestions</div>' +
+                    suggestions.map(function (s) {
+                        return '<div class="ats-item ats-item--suggestion">' +
+                            '<span class="ats-item-icon">' + ATS_SUGGEST_ICON + '</span>' +
+                            '<span>' + escHtml(s.message) + '</span>' +
+                            '</div>';
+                    }).join('');
+            } else {
+                atsSuggestionsEl.innerHTML = '';
+            }
+        }
+    }
+
+    if (refreshAtsBtnEl) {
+        refreshAtsBtnEl.addEventListener('click', fetchAtsScore);
     }
 
     // ── Unified keyboard shortcuts ───────────────

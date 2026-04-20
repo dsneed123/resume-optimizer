@@ -2216,3 +2216,118 @@ body {
         border-radius: 0;
     }
 }
+
+/* ── ATS Score Panel ───────────────────────────── */
+.ats-gauge-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0 8px;
+    gap: 6px;
+}
+
+.ats-gauge {
+    display: block;
+}
+
+.ats-gauge-bg {
+    fill: none;
+    stroke: #e5e7eb;
+    stroke-width: 8;
+}
+
+.ats-gauge-fill {
+    fill: none;
+    stroke: #e5e7eb;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50px 50px;
+    stroke-dasharray: 251.33 251.33;
+    stroke-dashoffset: 251.33;
+    transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
+}
+
+.ats-gauge-wrap--red .ats-gauge-fill    { stroke: #ef4444; }
+.ats-gauge-wrap--yellow .ats-gauge-fill { stroke: #f59e0b; }
+.ats-gauge-wrap--green .ats-gauge-fill  { stroke: #22c55e; }
+
+.ats-score-number {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+    margin-top: -4px;
+}
+
+.ats-score-label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.ats-btn-wrap {
+    padding: 0 16px 8px;
+}
+
+.ats-refresh-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ats-refresh-btn:hover {
+    background: #f0f4ff;
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.ats-refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.ats-list-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px 4px;
+}
+
+.ats-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 5px 16px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.4;
+}
+
+.ats-item-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.ats-item--error .ats-item-icon      { color: #ef4444; }
+.ats-item--warning .ats-item-icon    { color: #f59e0b; }
+.ats-item--suggestion .ats-item-icon { color: var(--accent); }
+
+.ats-empty {
+    padding: 6px 16px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+}

@@ -216,6 +216,26 @@ def get_ats_score(resume_id):
     return jsonify({'score': result['score'], 'issues': issues, 'suggestions': suggestions})
 
 
+@bp.route('/api/resume/ats-score', methods=['POST'])
+def get_ats_score_inline():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
+    data = body.get('data')
+    if data is None:
+        return jsonify({'error': 'Body must include "data"'}), 400
+
+    from app.services.ats_optimizer import analyze_ats_score, suggest_improvements
+
+    result = analyze_ats_score(data)
+    raw_suggestions = suggest_improvements(data)
+
+    issues = [_classify_issue(msg) for msg in result['issues']]
+    suggestions = [_classify_suggestion(msg, i) for i, msg in enumerate(raw_suggestions)]
+
+    return jsonify({'score': result['score'], 'issues': issues, 'suggestions': suggestions})
+
+
 def _classify_issue(message: str) -> dict:
     msg_lower = message.lower()
     if any(w in msg_lower for w in ('experience', 'bullet', 'employment')):
