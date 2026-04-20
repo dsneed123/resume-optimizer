@@ -557,6 +557,7 @@
             <div class="import-tabs" role="tablist">
                 <button type="button" class="import-tab import-tab--active" id="importTabFile" role="tab" aria-controls="importPanelFile" aria-selected="true">Upload File</button>
                 <button type="button" class="import-tab" id="importTabText" role="tab" aria-controls="importPanelText" aria-selected="false">Paste Text</button>
+                <button type="button" class="import-tab" id="importTabLinkedIn" role="tab" aria-controls="importPanelLinkedIn" aria-selected="false">LinkedIn</button>
             </div>
             <div class="modal-body">
                 <div id="importPanelFile" role="tabpanel" aria-labelledby="importTabFile">
@@ -588,6 +589,15 @@
                         class="import-textarea"
                         placeholder="Paste your resume text here&hellip;"
                         aria-label="Resume plain text"
+                    ></textarea>
+                </div>
+                <div id="importPanelLinkedIn" role="tabpanel" aria-labelledby="importTabLinkedIn" hidden>
+                    <p class="import-textarea-hint">Copy your LinkedIn profile page text and paste below</p>
+                    <textarea
+                        id="importLinkedInTextarea"
+                        class="import-textarea"
+                        placeholder="Paste your LinkedIn profile text here&hellip;"
+                        aria-label="LinkedIn profile text"
                     ></textarea>
                 </div>
                 <div class="import-error" id="importError" hidden></div>

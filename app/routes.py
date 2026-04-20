@@ -21,6 +21,30 @@ _ALLOWED_MIMETYPES = {
 bp = Blueprint('main', __name__)
 
 
+@bp.route('/api/import/linkedin', methods=['POST'])
+def import_resume_linkedin():
+    body = request.get_json(silent=True)
+    if not body or not isinstance(body.get('text'), str):
+        return jsonify({'error': 'Body must include "text" string'}), 400
+
+    text = body['text'].strip()
+    if not text:
+        return jsonify({'error': 'Text is empty'}), 400
+
+    try:
+        from app.services.linkedin_import import import_linkedin
+        data = import_linkedin(text)
+    except Exception:
+        return jsonify({'error': 'Failed to parse LinkedIn profile'}), 422
+
+    from app.services.parse_confidence import compute_parse_confidence
+    parse_meta = compute_parse_confidence(data)
+
+    resume_id = str(uuid.uuid4())
+    save_resume(resume_id, data, default_typography())
+    return jsonify({'id': resume_id, 'data': data, 'parse_meta': parse_meta}), 201
+
+
 @bp.route('/api/import/text', methods=['POST'])
 def import_resume_text():
     body = request.get_json(silent=True)
