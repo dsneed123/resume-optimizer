@@ -828,4 +828,152 @@
     }
 
     renderEducationList();
+
+    // ── Skills section ────────────────────────
+    var skillOpenStates = [];
+
+    function newSkillEntry() {
+        return { category: '', items: [] };
+    }
+
+    function buildSkillItem(entry, index) {
+        var item = document.createElement('div');
+        item.className = 'skill-item' + (skillOpenStates[index] === false ? ' collapsed' : '');
+        item.dataset.index = String(index);
+        item.draggable = true;
+
+        var label = entry.category || 'New Category';
+        var chevron = skillOpenStates[index] === false ? '▸' : '▾';
+
+        item.innerHTML =
+            '<div class="skill-item-header">' +
+                '<span class="drag-handle" title="Drag to reorder">⠿</span>' +
+                '<span class="skill-item-label">' + escHtml(label) + '</span>' +
+                '<div class="skill-item-actions">' +
+                    '<button class="skill-toggle-btn" title="Expand/collapse">' + chevron + '</button>' +
+                    '<button class="skill-delete-btn" title="Delete category">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="skill-item-body">' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Category Name</label>' +
+                    '<input class="field-input skill-cat-field" type="text" value="' + escHtml(entry.category) + '" placeholder="Programming Languages">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Skills (comma-separated)</label>' +
+                    '<input class="field-input skill-items-field" type="text" value="' + escHtml((entry.items || []).join(', ')) + '" placeholder="Python, JavaScript, Go">' +
+                '</div>' +
+            '</div>';
+
+        var header = item.querySelector('.skill-item-header');
+        var toggleBtn = item.querySelector('.skill-toggle-btn');
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.skill-delete-btn') || e.target.closest('.drag-handle')) return;
+            var nowCollapsed = item.classList.toggle('collapsed');
+            skillOpenStates[index] = !nowCollapsed;
+            toggleBtn.textContent = nowCollapsed ? '▸' : '▾';
+        });
+
+        item.querySelector('.skill-delete-btn').addEventListener('click', function () {
+            if (confirm('Delete this skill category?')) {
+                state.data.skills.splice(index, 1);
+                skillOpenStates.splice(index, 1);
+                renderSkillList();
+                notifyChange();
+            }
+        });
+
+        item.querySelector('.skill-cat-field').addEventListener('input', function () {
+            state.data.skills[index].category = this.value;
+            item.querySelector('.skill-item-label').textContent = this.value || 'New Category';
+            notifyChange();
+        });
+
+        item.querySelector('.skill-items-field').addEventListener('input', function () {
+            state.data.skills[index].items = this.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            notifyChange();
+        });
+
+        return item;
+    }
+
+    function bindSkillDragDrop() {
+        var listEl = document.getElementById('skillsList');
+        if (!listEl) return;
+        var items = listEl.querySelectorAll('.skill-item');
+        var dragSrcIndex = null;
+
+        items.forEach(function (item) {
+            item.addEventListener('dragstart', function (e) {
+                dragSrcIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', function () {
+                item.classList.remove('dragging');
+                items.forEach(function (i) { i.classList.remove('drag-over'); });
+                dragSrcIndex = null;
+            });
+
+            item.addEventListener('dragover', function (e) {
+                if (dragSrcIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', function () {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dropIndex = parseInt(item.dataset.index);
+                if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    var skills = state.data.skills;
+                    var moved = skills.splice(dragSrcIndex, 1)[0];
+                    skills.splice(dropIndex, 0, moved);
+                    var openMoved = skillOpenStates.splice(dragSrcIndex, 1)[0];
+                    skillOpenStates.splice(dropIndex, 0, openMoved);
+                    renderSkillList();
+                    notifyChange();
+                }
+                dragSrcIndex = null;
+            });
+        });
+    }
+
+    function renderSkillList() {
+        var listEl = document.getElementById('skillsList');
+        if (!listEl) return;
+
+        if (!state.data.skills.length) {
+            listEl.innerHTML = '<p class="empty-state">No skills added yet.</p>';
+            return;
+        }
+
+        while (skillOpenStates.length < state.data.skills.length) skillOpenStates.push(true);
+        skillOpenStates.length = state.data.skills.length;
+
+        listEl.innerHTML = '';
+        state.data.skills.forEach(function (entry, index) {
+            listEl.appendChild(buildSkillItem(entry, index));
+        });
+
+        bindSkillDragDrop();
+    }
+
+    var addSkillBtn = document.getElementById('addSkill');
+    if (addSkillBtn) {
+        addSkillBtn.addEventListener('click', function () {
+            state.data.skills.push(newSkillEntry());
+            skillOpenStates.push(true);
+            renderSkillList();
+            notifyChange();
+        });
+    }
+
+    renderSkillList();
 })();
