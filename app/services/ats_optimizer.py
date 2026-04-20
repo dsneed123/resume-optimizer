@@ -70,6 +70,7 @@ _NUMERIC_DATE_RE = re.compile(r'\b\d{1,2}/\d{4}\b|\b\d{4}-\d{2}\b')
 
 _EMAIL_RE = re.compile(r'[\w.+-]+@[\w-]+\.[a-z]{2,}', re.IGNORECASE)
 _PHONE_RE = re.compile(r'(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}')
+_NAME_LOOKS_WRONG_RE = re.compile(r'[@\d]')
 
 
 def _has_standard_sections(resume_data: dict) -> tuple[bool, list[str]]:
@@ -83,17 +84,46 @@ def _has_standard_sections(resume_data: dict) -> tuple[bool, list[str]]:
     return len(issues) == 0, issues
 
 
-def _has_contact_info(resume_data: dict) -> tuple[bool, list[str]]:
-    issues = []
+def _check_name_present(resume_data: dict) -> tuple[bool, list[str]]:
     header = resume_data.get("header", {})
     if not isinstance(header, dict):
         return False, ["Contact info missing or malformed"]
-    if not header.get("name"):
-        issues.append("Missing name in contact info")
+    name = (header.get("name") or "").strip()
+    if not name:
+        return False, ["Missing name in contact info"]
+    if _NAME_LOOKS_WRONG_RE.search(name):
+        return False, [f"Name '{name}' appears malformed — check that it contains only your full name"]
+    if len(name.split()) < 2:
+        return False, [f"Name '{name}' appears incomplete — provide first and last name"]
+    return True, []
+
+
+def _check_email_present(resume_data: dict) -> tuple[bool, list[str]]:
+    header = resume_data.get("header", {})
+    if not isinstance(header, dict):
+        return False, ["Contact info missing or malformed"]
     if not header.get("email"):
-        issues.append("Missing email in contact info")
+        return False, ["Missing email in contact info"]
+    return True, []
+
+
+def _check_phone_present(resume_data: dict) -> tuple[bool, list[str]]:
+    header = resume_data.get("header", {})
+    if not isinstance(header, dict):
+        return False, ["Contact info missing or malformed"]
     if not header.get("phone"):
-        issues.append("Missing phone number in contact info")
+        return False, ["Missing phone number in contact info"]
+    return True, []
+
+
+def _has_contact_info(resume_data: dict) -> tuple[bool, list[str]]:
+    header = resume_data.get("header", {})
+    if not isinstance(header, dict):
+        return False, ["Contact info missing or malformed"]
+    issues: list[str] = []
+    for check_fn in (_check_name_present, _check_email_present, _check_phone_present):
+        _, fn_issues = check_fn(resume_data)
+        issues.extend(fn_issues)
     return len(issues) == 0, issues
 
 
@@ -227,7 +257,9 @@ def _check_section_headings(resume_data: dict) -> tuple[bool, list[str]]:
 
 _CHECKS = [
     (_has_standard_sections, 20),
-    (_has_contact_info, 20),
+    (_check_name_present, 5),
+    (_check_email_present, 10),
+    (_check_phone_present, 5),
     (_check_date_formats, 15),
     (_check_no_numeric_dates, 10),
     (_check_summary_present, 15),
@@ -263,6 +295,10 @@ def suggest_improvements(resume_data: dict) -> list[str]:
     suggestions: list[str] = []
 
     header = resume_data.get("header", {}) or {}
+    if not header.get("location"):
+        suggestions.append(
+            "Add a location (city, state) to your contact info — ATS systems often filter candidates by location."
+        )
     if not header.get("linkedin"):
         suggestions.append(
             "Add a LinkedIn URL to your contact info — many ATS systems extract it."

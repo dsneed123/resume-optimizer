@@ -5,6 +5,9 @@ from app.services.ats_optimizer import (
     suggest_improvements,
     _has_standard_sections,
     _has_contact_info,
+    _check_name_present,
+    _check_email_present,
+    _check_phone_present,
     _check_date_formats,
     _check_no_numeric_dates,
     _check_summary_present,
@@ -163,6 +166,116 @@ def test_contact_info_missing_phone():
 def test_contact_info_not_dict():
     passed, issues = _has_contact_info({"header": "invalid"})
     assert not passed
+
+
+# --- _check_name_present ---
+
+def test_name_present_valid():
+    passed, issues = _check_name_present(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_name_missing_fails():
+    data = _full_resume()
+    data["header"]["name"] = ""
+    passed, issues = _check_name_present(data)
+    assert not passed
+    assert any("name" in i.lower() for i in issues)
+
+
+def test_name_single_word_fails():
+    data = _full_resume()
+    data["header"]["name"] = "Jane"
+    passed, issues = _check_name_present(data)
+    assert not passed
+    assert any("incomplete" in i.lower() for i in issues)
+
+
+def test_name_with_email_chars_fails():
+    data = _full_resume()
+    data["header"]["name"] = "jane@smith.com"
+    passed, issues = _check_name_present(data)
+    assert not passed
+    assert any("malformed" in i.lower() for i in issues)
+
+
+def test_name_with_digits_fails():
+    data = _full_resume()
+    data["header"]["name"] = "Jane Smith 123"
+    passed, issues = _check_name_present(data)
+    assert not passed
+    assert any("malformed" in i.lower() for i in issues)
+
+
+def test_name_penalizes_score():
+    data = _full_resume()
+    data["header"]["name"] = ""
+    result = analyze_ats_score(data)
+    assert result["score"] == 95  # -5 for missing name
+    assert any("name" in i.lower() for i in result["issues"])
+
+
+# --- _check_email_present ---
+
+def test_email_present():
+    passed, issues = _check_email_present(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_email_missing_fails():
+    data = _full_resume()
+    data["header"]["email"] = ""
+    passed, issues = _check_email_present(data)
+    assert not passed
+    assert any("email" in i.lower() for i in issues)
+
+
+def test_email_missing_penalizes_ten():
+    data = _full_resume()
+    data["header"]["email"] = ""
+    result = analyze_ats_score(data)
+    assert result["score"] == 90  # -10 for missing email
+    assert any("email" in i.lower() for i in result["issues"])
+
+
+# --- _check_phone_present ---
+
+def test_phone_present():
+    passed, issues = _check_phone_present(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_phone_missing_fails():
+    data = _full_resume()
+    data["header"]["phone"] = ""
+    passed, issues = _check_phone_present(data)
+    assert not passed
+    assert any("phone" in i.lower() for i in issues)
+
+
+def test_phone_missing_penalizes_five():
+    data = _full_resume()
+    data["header"]["phone"] = ""
+    result = analyze_ats_score(data)
+    assert result["score"] == 95  # -5 for missing phone
+    assert any("phone" in i.lower() for i in result["issues"])
+
+
+# --- contact suggestions ---
+
+def test_suggest_improvements_missing_location():
+    data = _full_resume()
+    data["header"]["location"] = ""
+    suggestions = suggest_improvements(data)
+    assert any("location" in s.lower() for s in suggestions)
+
+
+def test_suggest_improvements_has_location_no_location_suggestion():
+    suggestions = suggest_improvements(_full_resume())
+    assert not any("location" in s.lower() for s in suggestions)
 
 
 # --- _check_date_formats ---
