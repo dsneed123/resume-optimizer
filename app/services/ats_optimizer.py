@@ -14,6 +14,53 @@ _SECTION_HEADING_RE = re.compile(
     re.IGNORECASE,
 )
 
+_STANDARD_HEADINGS: dict[str, dict] = {
+    "experience": {
+        "alternatives": {
+            "experience", "work experience", "professional experience",
+            "employment history", "professional background",
+        },
+        "suggested": "Experience",
+    },
+    "education": {
+        "alternatives": {
+            "education", "academic background", "education & training",
+        },
+        "suggested": "Education",
+    },
+    "skills": {
+        "alternatives": {
+            "skills", "technical skills", "core competencies", "technologies",
+        },
+        "suggested": "Skills",
+    },
+    "summary": {
+        "alternatives": {
+            "summary", "professional summary", "objective", "profile", "about", "about me",
+        },
+        "suggested": "Professional Summary",
+    },
+    "certifications": {
+        "alternatives": {
+            "certifications", "certification", "licenses & certifications",
+            "certifications & licenses", "licenses",
+        },
+        "suggested": "Certifications",
+    },
+    "projects": {
+        "alternatives": {
+            "projects", "project", "personal projects", "side projects",
+        },
+        "suggested": "Projects",
+    },
+    "awards": {
+        "alternatives": {
+            "awards", "awards & honors", "honors", "achievements",
+        },
+        "suggested": "Awards & Honors",
+    },
+}
+
 _MONTH_YEAR_RE = re.compile(
     r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}\b',
     re.IGNORECASE,
@@ -155,6 +202,29 @@ def _check_experience_bullets(resume_data: dict) -> tuple[bool, list[str]]:
     return len(issues) == 0, issues
 
 
+def _check_section_headings(resume_data: dict) -> tuple[bool, list[str]]:
+    """Flag non-standard section headings; each costs -5 in the caller."""
+    section_headings = resume_data.get("section_headings")
+    if not section_headings or not isinstance(section_headings, dict):
+        return True, []
+
+    issues = []
+    for section_key, heading in section_headings.items():
+        if not isinstance(heading, str) or not heading.strip():
+            continue
+        std = _STANDARD_HEADINGS.get(section_key)
+        if std is None:
+            continue
+        if heading.strip().lower() not in std["alternatives"]:
+            issues.append(
+                f"Non-standard section heading '{heading}' "
+                f"(for {section_key}). "
+                f"Consider using '{std['suggested']}' for better ATS compatibility."
+            )
+
+    return len(issues) == 0, issues
+
+
 _CHECKS = [
     (_has_standard_sections, 20),
     (_has_contact_info, 20),
@@ -176,6 +246,12 @@ def analyze_ats_score(resume_data: dict) -> dict:
         if not passed:
             all_issues.extend(issues)
             penalty += weight
+
+    # -5 per non-standard section heading
+    passed, heading_issues = _check_section_headings(resume_data)
+    if not passed:
+        all_issues.extend(heading_issues)
+        penalty += 5 * len(heading_issues)
 
     score = max(0, 100 - penalty)
     return {"score": score, "issues": all_issues}

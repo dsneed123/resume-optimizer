@@ -10,6 +10,7 @@ from app.services.ats_optimizer import (
     _check_summary_present,
     _check_skills_present,
     _check_experience_bullets,
+    _check_section_headings,
 )
 
 
@@ -272,6 +273,61 @@ def test_suggest_improvements_short_summary():
     data["summary"] = "Engineer."
     suggestions = suggest_improvements(data)
     assert any("summary" in s.lower() or "20" in s for s in suggestions)
+
+
+# --- _check_section_headings ---
+
+def test_section_headings_no_field_passes():
+    passed, issues = _check_section_headings(_full_resume())
+    assert passed
+    assert issues == []
+
+
+def test_section_headings_standard_passes():
+    data = _full_resume()
+    data["section_headings"] = {"experience": "Experience", "education": "Education"}
+    passed, issues = _check_section_headings(data)
+    assert passed
+    assert issues == []
+
+
+def test_section_headings_non_standard_flagged():
+    data = _full_resume()
+    data["section_headings"] = {"experience": "What I Do"}
+    passed, issues = _check_section_headings(data)
+    assert not passed
+    assert len(issues) == 1
+    assert "What I Do" in issues[0]
+    assert "Experience" in issues[0]
+
+
+def test_section_headings_multiple_non_standard():
+    data = _full_resume()
+    data["section_headings"] = {"experience": "What I Do", "skills": "My Toolkit"}
+    passed, issues = _check_section_headings(data)
+    assert not passed
+    assert len(issues) == 2
+
+
+def test_section_headings_case_insensitive_match():
+    data = _full_resume()
+    data["section_headings"] = {"experience": "EXPERIENCE"}
+    passed, issues = _check_section_headings(data)
+    assert passed
+
+
+def test_section_headings_penalty_five_per_heading():
+    data = _full_resume()
+    data["section_headings"] = {"experience": "What I Do", "skills": "My Toolkit"}
+    result = analyze_ats_score(data)
+    assert result["score"] == 90  # 2 non-standard headings → -10
+
+
+def test_section_headings_unknown_section_key_ignored():
+    data = _full_resume()
+    data["section_headings"] = {"custom_block": "Random Heading"}
+    passed, issues = _check_section_headings(data)
+    assert passed
 
 
 def test_suggest_improvements_long_bullets():
