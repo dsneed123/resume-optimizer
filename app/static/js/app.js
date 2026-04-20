@@ -391,12 +391,14 @@
         var activeBtn = nav.querySelector('.sidebar-nav-btn.active');
         var activeSection = activeBtn ? activeBtn.dataset.section : 'header';
 
-        // Remove all non-contact buttons
-        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"])')).forEach(function (b) {
+        // Remove all non-contact, non-typography buttons
+        Array.from(nav.querySelectorAll('.sidebar-nav-btn:not([data-section="header"]):not([data-section="typography"])')).forEach(function (b) {
             nav.removeChild(b);
         });
 
         // Add buttons in section_order order, each with a drag handle
+        // Insert before the Typography button so it stays last
+        var typoNavBtn = nav.querySelector('.sidebar-nav-btn[data-section="typography"]');
         var order = state.data.section_order || DEFAULT_SECTION_ORDER;
         order.forEach(function (key) {
             var meta = SECTION_META[key];
@@ -405,7 +407,11 @@
             btn.className = 'sidebar-nav-btn' + (activeSection === key ? ' active' : '');
             btn.dataset.section = key;
             btn.innerHTML = '<span class="nav-drag-handle" title="Drag to reorder">⠿</span>' + meta.label;
-            nav.appendChild(btn);
+            if (typoNavBtn) {
+                nav.insertBefore(btn, typoNavBtn);
+            } else {
+                nav.appendChild(btn);
+            }
         });
 
         bindNavClicks();
@@ -1576,4 +1582,54 @@
     }
 
     renderAwardList();
+
+    // ── Typography controls ──────────────────────
+    function bindTypoSlider(sliderId, valId, typoKey, unit) {
+        var slider = document.getElementById(sliderId);
+        var valEl = valId ? document.getElementById(valId) : null;
+        if (!slider) return;
+        slider.value = state.typo[typoKey];
+        if (valEl) valEl.textContent = state.typo[typoKey] + unit;
+        slider.addEventListener('input', function () {
+            var v = parseFloat(slider.value);
+            state.typo[typoKey] = v;
+            if (valEl) valEl.textContent = v + unit;
+            notifyChange();
+        });
+    }
+
+    var typoFontFamilyEl = document.getElementById('typoFontFamily');
+    if (typoFontFamilyEl) {
+        typoFontFamilyEl.value = state.typo.font_family;
+        typoFontFamilyEl.addEventListener('change', function () {
+            state.typo.font_family = typoFontFamilyEl.value;
+            notifyChange();
+        });
+    }
+
+    var typoSizeNameSlider = document.getElementById('typoSizeName');
+    var typoSizeNameNum = document.getElementById('typoSizeNameNum');
+    if (typoSizeNameSlider && typoSizeNameNum) {
+        typoSizeNameSlider.value = state.typo.font_size_name;
+        typoSizeNameNum.value = state.typo.font_size_name;
+        typoSizeNameSlider.addEventListener('input', function () {
+            var v = parseFloat(typoSizeNameSlider.value);
+            state.typo.font_size_name = v;
+            typoSizeNameNum.value = v;
+            notifyChange();
+        });
+        typoSizeNameNum.addEventListener('input', function () {
+            var v = Math.min(28, Math.max(14, parseFloat(typoSizeNameNum.value) || state.typo.font_size_name));
+            state.typo.font_size_name = v;
+            typoSizeNameSlider.value = v;
+            notifyChange();
+        });
+    }
+
+    bindTypoSlider('typoSizeSectionHeader', 'typoSizeSectionHeaderVal', 'font_size_section_header', 'pt');
+    bindTypoSlider('typoSizeBody', 'typoSizeBodyVal', 'font_size_body', 'pt');
+    bindTypoSlider('typoSizeDetail', 'typoSizeDetailVal', 'font_size_detail', 'pt');
+    bindTypoSlider('typoLineHeight', 'typoLineHeightVal', 'line_height', '');
+    bindTypoSlider('typoParagraphSpacing', 'typoParagraphSpacingVal', 'paragraph_spacing', 'pt');
+    bindTypoSlider('typoSectionSpacing', 'typoSectionSpacingVal', 'section_spacing', 'pt');
 })();
