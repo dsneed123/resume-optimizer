@@ -168,6 +168,34 @@
                 #resumePage .rv-skill-row {
                     margin-bottom: 2pt;
                 }
+                #resumePage .rv-skills-columns {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 0 12pt;
+                }
+                #resumePage .rv-skill-col {
+                    margin-bottom: 2pt;
+                }
+                #resumePage .rv-skill-item {
+                    font-size: ${t.font_size_body}pt;
+                    line-height: ${t.line_height};
+                }
+                #resumePage .rv-skills-tags .rv-skill-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: baseline;
+                    gap: 3pt;
+                    margin-bottom: 4pt;
+                }
+                #resumePage .rv-skill-tag {
+                    display: inline-block;
+                    border: 0.5pt solid #888;
+                    border-radius: 3pt;
+                    padding: 0.5pt 4pt;
+                    font-size: ${t.font_size_detail}pt;
+                    line-height: 1.4;
+                    white-space: nowrap;
+                }
                 #resumePage .rv-cert {
                     margin-bottom: ${t.paragraph_spacing}pt;
                 }
@@ -300,12 +328,33 @@
         _renderSkillsHtml(d) {
             const skills = (d.skills || []).filter(s => s.category || (s.items && s.items.length));
             if (!skills.length) return '';
-            let html = '<div class="rv-section"><div class="rv-section-title">Skills</div><div class="rv-skills-grid">';
-            for (const s of skills) {
-                html += '<div class="rv-skill-row">';
-                if (s.category) html += `<span class="rv-skill-cat">${this._esc(s.category)}:</span> `;
-                html += this._esc((s.items || []).join(', '));
-                html += '</div>';
+            const layout = (this.typo && this.typo.skills_layout) || 'inline';
+            let html = `<div class="rv-section"><div class="rv-section-title">Skills</div><div class="rv-skills-grid rv-skills-${layout}">`;
+            if (layout === 'columns') {
+                for (const s of skills) {
+                    html += '<div class="rv-skill-col">';
+                    if (s.category) html += `<div class="rv-skill-cat">${this._esc(s.category)}</div>`;
+                    for (const item of (s.items || [])) {
+                        html += `<div class="rv-skill-item">${this._esc(item)}</div>`;
+                    }
+                    html += '</div>';
+                }
+            } else if (layout === 'tags') {
+                for (const s of skills) {
+                    html += '<div class="rv-skill-row">';
+                    if (s.category) html += `<span class="rv-skill-cat">${this._esc(s.category)}:</span> `;
+                    for (const item of (s.items || [])) {
+                        html += `<span class="rv-skill-tag">${this._esc(item)}</span>`;
+                    }
+                    html += '</div>';
+                }
+            } else {
+                for (const s of skills) {
+                    html += '<div class="rv-skill-row">';
+                    if (s.category) html += `<span class="rv-skill-cat">${this._esc(s.category)}:</span> `;
+                    html += this._esc((s.items || []).join(', '));
+                    html += '</div>';
+                }
             }
             return html + '</div></div>';
         }
@@ -1919,6 +1968,21 @@
         });
     }
 
+    var skillsLayoutOptionsEl = document.getElementById('skillsLayoutOptions');
+    if (skillsLayoutOptionsEl) {
+        var activeSkillsLayout = state.typo.skills_layout || 'inline';
+        skillsLayoutOptionsEl.querySelectorAll('.layout-option').forEach(function (btn) {
+            if (btn.dataset.layout === activeSkillsLayout) btn.classList.add('active');
+            else btn.classList.remove('active');
+            btn.addEventListener('click', function () {
+                skillsLayoutOptionsEl.querySelectorAll('.layout-option').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                state.typo.skills_layout = btn.dataset.layout;
+                notifyChange();
+            });
+        });
+    }
+
     var typoSizeNameSlider = document.getElementById('typoSizeName');
     var typoSizeNameNum = document.getElementById('typoSizeNameNum');
     if (typoSizeNameSlider && typoSizeNameNum) {
@@ -2085,6 +2149,13 @@
 
         var sectionDividerEl = document.getElementById('typoSectionDividerStyle');
         if (sectionDividerEl) sectionDividerEl.value = typo.section_divider_style || 'thin';
+
+        var skillsLayoutEl = document.getElementById('skillsLayoutOptions');
+        if (skillsLayoutEl && typo.skills_layout) {
+            skillsLayoutEl.querySelectorAll('.layout-option').forEach(function (btn) {
+                btn.classList.toggle('active', btn.dataset.layout === typo.skills_layout);
+            });
+        }
 
         var sizeNameSlider = document.getElementById('typoSizeName');
         var sizeNameNum = document.getElementById('typoSizeNameNum');

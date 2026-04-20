@@ -160,6 +160,7 @@ class TypographySettings:
     header_layout: str = "centered"
     contact_separator: str = "pipe"
     section_divider_style: str = "thin"
+    skills_layout: str = "inline"
 
 
 def default_typography() -> dict:
@@ -181,6 +182,7 @@ def default_typography() -> dict:
         "header_layout": "centered",
         "contact_separator": "pipe",
         "section_divider_style": "thin",
+        "skills_layout": "inline",
     }
 
 
