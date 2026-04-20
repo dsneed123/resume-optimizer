@@ -1,5 +1,10 @@
+import re
 from dataclasses import dataclass, field
 from typing import Optional
+
+_EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$')
+_URL_RE = re.compile(r'(?:https?://|www\.)|[a-zA-Z0-9](?:[a-zA-Z0-9-]*\.)+[a-zA-Z]{2,}')
+_DATE_RE = re.compile(r'(?:19|20)\d{2}|^present$', re.IGNORECASE)
 
 
 @dataclass
@@ -197,8 +202,20 @@ def validate_resume(data: dict) -> list[str]:
     else:
         if not header.get("name"):
             errors.append("header.name is required")
-        if not header.get("email"):
+        email = header.get("email", "")
+        if not email:
             errors.append("header.email is required")
+        elif not _EMAIL_RE.match(email):
+            errors.append("header.email is not a valid email address")
+        phone = header.get("phone", "")
+        if phone and len(re.sub(r'\D', '', phone)) < 7:
+            errors.append("header.phone is not a valid phone number")
+        linkedin = header.get("linkedin", "")
+        if linkedin and not _URL_RE.search(linkedin):
+            errors.append("header.linkedin is not a valid URL")
+        website = header.get("website", "")
+        if website and not _URL_RE.search(website):
+            errors.append("header.website is not a valid URL")
 
     for i, exp in enumerate(data.get("experience", [])):
         if not isinstance(exp, dict):
@@ -210,6 +227,12 @@ def validate_resume(data: dict) -> list[str]:
             errors.append(f"experience[{i}].title is required")
         if not isinstance(exp.get("bullets", []), list):
             errors.append(f"experience[{i}].bullets must be a list")
+        start_date = exp.get("start_date", "")
+        if start_date and not _DATE_RE.search(start_date):
+            errors.append(f"experience[{i}].start_date is not a valid date")
+        end_date = exp.get("end_date", "")
+        if end_date and not _DATE_RE.search(end_date):
+            errors.append(f"experience[{i}].end_date is not a valid date")
 
     for i, edu in enumerate(data.get("education", [])):
         if not isinstance(edu, dict):
@@ -217,6 +240,9 @@ def validate_resume(data: dict) -> list[str]:
             continue
         if not edu.get("school"):
             errors.append(f"education[{i}].school is required")
+        graduation_date = edu.get("graduation_date", "")
+        if graduation_date and not _DATE_RE.search(graduation_date):
+            errors.append(f"education[{i}].graduation_date is not a valid date")
 
     for i, skill in enumerate(data.get("skills", [])):
         if not isinstance(skill, dict):
@@ -224,5 +250,33 @@ def validate_resume(data: dict) -> list[str]:
             continue
         if not isinstance(skill.get("items", []), list):
             errors.append(f"skills[{i}].items must be a list")
+
+    for i, cert in enumerate(data.get("certifications", [])):
+        if not isinstance(cert, dict):
+            errors.append(f"certifications[{i}] must be a dict")
+            continue
+        cert_date = cert.get("date", "")
+        if cert_date and not _DATE_RE.search(cert_date):
+            errors.append(f"certifications[{i}].date is not a valid date")
+
+    for i, proj in enumerate(data.get("projects", [])):
+        if not isinstance(proj, dict):
+            errors.append(f"projects[{i}] must be a dict")
+            continue
+        proj_url = proj.get("url", "")
+        if proj_url and not _URL_RE.search(proj_url):
+            errors.append(f"projects[{i}].url is not a valid URL")
+
+    for i, award in enumerate(data.get("awards", [])):
+        if not isinstance(award, dict):
+            errors.append(f"awards[{i}] must be a dict")
+            continue
+        award_date = award.get("date", "")
+        if award_date and not _DATE_RE.search(award_date):
+            errors.append(f"awards[{i}].date is not a valid date")
+
+    sections = ["experience", "education", "skills", "certifications", "projects", "awards"]
+    if not any(data.get(s) for s in sections):
+        errors.append("at least one resume section is required")
 
     return errors

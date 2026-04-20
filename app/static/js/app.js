@@ -1562,6 +1562,19 @@
     bindField('website', 'header.website');
     bindField('summary', 'summary');
 
+    (function () {
+        var nameEl = document.getElementById('name');
+        var emailEl = document.getElementById('email');
+        var phoneEl = document.getElementById('phone');
+        var linkedinEl = document.getElementById('linkedin');
+        var websiteEl = document.getElementById('website');
+        if (nameEl) nameEl.addEventListener('blur', function () { validateRequiredField(nameEl, 'Name'); });
+        if (emailEl) emailEl.addEventListener('blur', function () { validateEmailField(emailEl); });
+        if (phoneEl) phoneEl.addEventListener('blur', function () { validatePhoneField(phoneEl); });
+        if (linkedinEl) linkedinEl.addEventListener('blur', function () { validateUrlField(linkedinEl); });
+        if (websiteEl) websiteEl.addEventListener('blur', function () { validateUrlField(websiteEl); });
+    }());
+
     if (resumeNameEl) {
         resumeNameEl.addEventListener('input', function () {
             state.meta.resume_name = resumeNameEl.value;
@@ -1603,6 +1616,70 @@
             state.data.show_summary = summaryVisibleEl.checked;
             notifyChange();
         });
+    }
+
+    // ── Input validation ─────────────────────────
+    var _RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    var _RE_URL = /(?:https?:\/\/|www\.)|[a-zA-Z0-9](?:[a-zA-Z0-9-]*\.)+[a-zA-Z]{2,}/;
+    var _RE_DATE = /(?:19|20)\d{2}|^present$/i;
+
+    function setFieldError(inputEl, msg) {
+        var group = inputEl.closest('.field-group');
+        if (!group) return;
+        var errEl = group.querySelector('.field-error');
+        if (!errEl) {
+            errEl = document.createElement('div');
+            errEl.className = 'field-error';
+            group.appendChild(errEl);
+        }
+        errEl.textContent = msg || '';
+        inputEl.classList.toggle('field-input--error', !!msg);
+    }
+
+    function validateEmailField(el) {
+        var val = el.value.trim();
+        if (!val) {
+            setFieldError(el, 'Email is required');
+        } else if (!_RE_EMAIL.test(val)) {
+            setFieldError(el, 'Enter a valid email address');
+        } else {
+            setFieldError(el, '');
+        }
+    }
+
+    function validatePhoneField(el) {
+        var val = el.value.trim();
+        if (val && val.replace(/\D/g, '').length < 7) {
+            setFieldError(el, 'Enter a valid phone number');
+        } else {
+            setFieldError(el, '');
+        }
+    }
+
+    function validateUrlField(el) {
+        var val = el.value.trim();
+        if (val && !_RE_URL.test(val)) {
+            setFieldError(el, 'Enter a valid URL (e.g. https://example.com)');
+        } else {
+            setFieldError(el, '');
+        }
+    }
+
+    function validateDateField(el) {
+        var val = el.value.trim();
+        if (val && !_RE_DATE.test(val)) {
+            setFieldError(el, 'Enter a date like "Jan 2020" or a year');
+        } else {
+            setFieldError(el, '');
+        }
+    }
+
+    function validateRequiredField(el, label) {
+        if (!el.value.trim()) {
+            setFieldError(el, (label || 'This field') + ' is required');
+        } else {
+            setFieldError(el, '');
+        }
     }
 
     // ── Experience section ───────────────────────
@@ -1774,6 +1851,15 @@
                     [e2.title, e2.company].filter(Boolean).join(' @ ') || 'New Entry';
                 notifyChange();
             });
+            if (input.dataset.field === 'start_date' || input.dataset.field === 'end_date') {
+                input.addEventListener('blur', function () { validateDateField(input); });
+            }
+            if (input.dataset.field === 'company') {
+                input.addEventListener('blur', function () { validateRequiredField(input, 'Company'); });
+            }
+            if (input.dataset.field === 'title') {
+                input.addEventListener('blur', function () { validateRequiredField(input, 'Job Title'); });
+            }
         });
 
         item.querySelector('.exp-present').addEventListener('change', function () {
@@ -2100,6 +2186,12 @@
                 }
                 notifyChange();
             });
+            if (input.dataset.field === 'school') {
+                input.addEventListener('blur', function () { validateRequiredField(input, 'School'); });
+            }
+            if (input.dataset.field === 'graduation_date') {
+                input.addEventListener('blur', function () { validateDateField(input); });
+            }
         });
 
         return item;
@@ -2413,6 +2505,9 @@
                 }
                 notifyChange();
             });
+            if (input.dataset.field === 'date') {
+                input.addEventListener('blur', function () { validateDateField(input); });
+            }
         });
 
         return item;
@@ -2582,6 +2677,9 @@
                 }
                 notifyChange();
             });
+            if (input.dataset.field === 'url') {
+                input.addEventListener('blur', function () { validateUrlField(input); });
+            }
         });
 
         return item;
@@ -2751,6 +2849,9 @@
                 }
                 notifyChange();
             });
+            if (input.dataset.field === 'date') {
+                input.addEventListener('blur', function () { validateDateField(input); });
+            }
         });
 
         return item;
