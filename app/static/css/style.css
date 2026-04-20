@@ -657,6 +657,10 @@ body {
     gap: 8px;
 }
 
+.date-row.end-date-hidden {
+    grid-template-columns: 1fr;
+}
+
 .present-row {
     display: flex;
     align-items: center;
