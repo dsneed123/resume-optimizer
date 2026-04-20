@@ -287,6 +287,7 @@
         }
 
         _renderExperienceHtml(d) {
+            if (d.show_experience === false) return '';
             const exp = (d.experience || []).filter(e => e.company || e.title);
             if (!exp.length) return '';
             let html = '<div class="rv-section"><div class="rv-section-title">Experience</div>';
@@ -311,6 +312,7 @@
         }
 
         _renderEducationHtml(d) {
+            if (d.show_education === false) return '';
             const edu = (d.education || []).filter(e => e.school);
             if (!edu.length) return '';
             let html = '<div class="rv-section"><div class="rv-section-title">Education</div>';
@@ -336,7 +338,7 @@
 
         _renderSkillsHtml(d) {
             const skills = (d.skills || []).filter(s => s.category || (s.items && s.items.length));
-            if (!skills.length) return '';
+            if (!skills.length || d.show_skills === false) return '';
             const layout = (this.typo && this.typo.skills_layout) || 'inline';
             let html = `<div class="rv-section"><div class="rv-section-title">Skills</div><div class="rv-skills-grid rv-skills-${layout}">`;
             if (layout === 'columns') {
@@ -475,14 +477,17 @@
     var DEFAULT_SECTION_ORDER = ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards'];
 
     var SECTION_META = {
-        summary:        { label: 'Summary' },
-        experience:     { label: 'Experience' },
-        education:      { label: 'Education' },
-        skills:         { label: 'Skills' },
-        projects:       { label: 'Projects' },
-        certifications: { label: 'Certs' },
-        awards:         { label: 'Awards' },
+        summary:        { label: 'Summary',     showKey: 'show_summary' },
+        experience:     { label: 'Experience',  showKey: 'show_experience' },
+        education:      { label: 'Education',   showKey: 'show_education' },
+        skills:         { label: 'Skills',      showKey: 'show_skills' },
+        projects:       { label: 'Projects',    showKey: 'show_projects' },
+        certifications: { label: 'Certs',       showKey: 'show_certifications' },
+        awards:         { label: 'Awards',      showKey: 'show_awards' },
     };
+
+    var EYE_OPEN_SVG = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1 6.5C1 6.5 3 2.5 6.5 2.5S12 6.5 12 6.5 10 10.5 6.5 10.5 1 6.5 1 6.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="6.5" cy="6.5" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>';
+    var EYE_CLOSED_SVG = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1.5 1.5l10 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M5.5 3C6 2.7 6.3 2.5 6.5 2.5c3.5 0 5.5 4 5.5 4s-.7 1.3-1.9 2.4M3 4.5C1.7 5.6 1 6.5 1 6.5s2 4 5.5 4c1 0 1.9-.3 2.7-.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
     function defaultData() {
         return {
@@ -490,8 +495,11 @@
             summary: '',
             show_summary: true,
             experience: [],
+            show_experience: true,
             education: [],
+            show_education: true,
             skills: [],
+            show_skills: true,
             certifications: [],
             show_certifications: true,
             projects: [],
@@ -678,6 +686,17 @@
     if (undoBtnEl) undoBtnEl.addEventListener('click', undo);
     if (redoBtnEl) redoBtnEl.addEventListener('click', redo);
 
+    // ── Section panel visibility (grayed out when hidden) ───────────────
+    function updateSectionPanelVisibility() {
+        var order = state.data.section_order || DEFAULT_SECTION_ORDER;
+        order.forEach(function (key) {
+            var meta = SECTION_META[key];
+            if (!meta || !meta.showKey) return;
+            var panel = document.getElementById('section-' + key);
+            if (panel) panel.classList.toggle('section-content-hidden', state.data[meta.showKey] === false);
+        });
+    }
+
     // ── Sidebar nav (dynamic, ordered by section_order) ─────────────────
     function renderSidebarNav() {
         var nav = document.getElementById('sidebarNav');
@@ -699,16 +718,23 @@
         order.forEach(function (key) {
             var meta = SECTION_META[key];
             if (!meta) return;
+            var isVisible = !meta.showKey || state.data[meta.showKey] !== false;
             var btn = document.createElement('button');
-            btn.className = 'sidebar-nav-btn' + (activeSection === key ? ' active' : '');
+            btn.className = 'sidebar-nav-btn' + (activeSection === key ? ' active' : '') + (isVisible ? '' : ' section-hidden');
             btn.dataset.section = key;
-            btn.innerHTML = '<span class="nav-drag-handle" title="Drag to reorder">⠿</span>' + meta.label;
+            btn.innerHTML = '<span class="nav-drag-handle" title="Drag to reorder">⠿</span>' +
+                '<span class="nav-label">' + meta.label + '</span>' +
+                '<button class="nav-eye-btn" title="' + (isVisible ? 'Hide section' : 'Show section') + '" aria-label="' + (isVisible ? 'Hide section' : 'Show section') + '">' +
+                (isVisible ? EYE_OPEN_SVG : EYE_CLOSED_SVG) +
+                '</button>';
             if (typoNavBtn) {
                 nav.insertBefore(btn, typoNavBtn);
             } else {
                 nav.appendChild(btn);
             }
         });
+
+        updateSectionPanelVisibility();
 
         bindNavClicks();
         bindNavDragDrop();
@@ -723,6 +749,17 @@
         allNavBtns.forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 if (e.target.closest('.nav-drag-handle')) return;
+                if (e.target.closest('.nav-eye-btn')) {
+                    pushHistory();
+                    var key = btn.dataset.section;
+                    var meta = SECTION_META[key];
+                    if (meta && meta.showKey) {
+                        state.data[meta.showKey] = state.data[meta.showKey] === false ? true : false;
+                        renderSidebarNav();
+                        notifyChange();
+                    }
+                    return;
+                }
                 allNavBtns.forEach(function (b) { b.classList.remove('active'); });
                 allSections.forEach(function (s) { s.classList.remove('active'); });
                 btn.classList.add('active');
