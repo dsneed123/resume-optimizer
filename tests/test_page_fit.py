@@ -238,3 +238,36 @@ def test_auto_fit_preserves_non_adjustable_keys():
         result = auto_fit(_full_resume(), typo)
     assert result['font_family'] == 'Georgia'
     assert result['font_size_name'] == 18
+
+
+# --- fits_one_page (estimation fallback, no WeasyPrint required) ---
+
+def test_fits_one_page_true_for_short_content():
+    with mock.patch('app.services.page_fit._render_page_count', side_effect=RuntimeError("no render")):
+        result = fits_one_page(_minimal_resume(), default_typography())
+    assert result is True
+
+
+def test_fits_one_page_false_for_long_content():
+    data = _full_resume()
+    data['experience'] = data['experience'] * 12
+    with mock.patch('app.services.page_fit._render_page_count', side_effect=RuntimeError("no render")):
+        result = fits_one_page(data, default_typography())
+    assert result is False
+
+
+# --- auto_fit (mock-based, no WeasyPrint required) ---
+
+def test_auto_fit_adjusts_typography_to_fit():
+    typo = default_typography()
+    # Return False twice then True so auto_fit makes adjustments before stopping
+    with mock.patch('app.services.page_fit.fits_one_page', side_effect=[False, False, True]):
+        result = auto_fit(_full_resume(), typo)
+    assert result['font_size_body'] < typo['font_size_body']
+
+
+def test_auto_fit_unchanged_for_already_fitting_content():
+    typo = default_typography()
+    with mock.patch('app.services.page_fit.fits_one_page', return_value=True):
+        result = auto_fit(_minimal_resume(), typo)
+    assert result == typo
