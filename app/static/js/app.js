@@ -1632,4 +1632,38 @@
     bindTypoSlider('typoLineHeight', 'typoLineHeightVal', 'line_height', '');
     bindTypoSlider('typoParagraphSpacing', 'typoParagraphSpacingVal', 'paragraph_spacing', 'pt');
     bindTypoSlider('typoSectionSpacing', 'typoSectionSpacingVal', 'section_spacing', 'pt');
+
+    // ── Margin controls ──────────────────────
+    var marginSliders = [
+        { sliderId: 'typoMarginTop',    valId: 'typoMarginTopVal',    key: 'margin_top' },
+        { sliderId: 'typoMarginBottom', valId: 'typoMarginBottomVal', key: 'margin_bottom' },
+        { sliderId: 'typoMarginLeft',   valId: 'typoMarginLeftVal',   key: 'margin_left' },
+        { sliderId: 'typoMarginRight',  valId: 'typoMarginRightVal',  key: 'margin_right' }
+    ];
+    var linkMarginsEl = document.getElementById('typoLinkMargins');
+
+    marginSliders.forEach(function (cfg) {
+        var slider = document.getElementById(cfg.sliderId);
+        var valEl = document.getElementById(cfg.valId);
+        if (!slider) return;
+        slider.value = state.typo[cfg.key];
+        if (valEl) valEl.textContent = state.typo[cfg.key].toFixed(2) + 'in';
+        slider.addEventListener('input', function () {
+            var v = parseFloat(slider.value);
+            if (linkMarginsEl && linkMarginsEl.checked) {
+                marginSliders.forEach(function (other) {
+                    var otherSlider = document.getElementById(other.sliderId);
+                    var otherVal = document.getElementById(other.valId);
+                    var clamped = Math.min(parseFloat(otherSlider.max), Math.max(parseFloat(otherSlider.min), v));
+                    state.typo[other.key] = clamped;
+                    otherSlider.value = clamped;
+                    if (otherVal) otherVal.textContent = clamped.toFixed(2) + 'in';
+                });
+            } else {
+                state.typo[cfg.key] = v;
+                if (valEl) valEl.textContent = v.toFixed(2) + 'in';
+            }
+            notifyChange();
+        });
+    });
 })();
