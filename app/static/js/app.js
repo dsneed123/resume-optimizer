@@ -907,12 +907,12 @@
                     '<label class="field-label">Location</label>' +
                     '<input class="field-input exp-field" data-field="location" type="text" value="' + escHtml(entry.location) + '" placeholder="San Francisco, CA">' +
                 '</div>' +
-                '<div class="date-row">' +
+                '<div class="date-row' + (entry.present ? ' end-date-hidden' : '') + '">' +
                     '<div class="field-group">' +
                         '<label class="field-label">Start Date</label>' +
                         '<input class="field-input exp-field" data-field="start_date" type="text" value="' + escHtml(entry.start_date) + '" placeholder="Jan 2020">' +
                     '</div>' +
-                    '<div class="field-group">' +
+                    '<div class="field-group end-date-group"' + (entry.present ? ' style="display:none"' : '') + '>' +
                         '<label class="field-label">End Date</label>' +
                         '<input class="field-input exp-field" data-field="end_date" type="text" value="' + escHtml(entry.end_date) + '" placeholder="Dec 2022"' + endDisabled + '>' +
                     '</div>' +
@@ -962,14 +962,20 @@
         item.querySelector('.exp-present').addEventListener('change', function () {
             state.data.experience[index].present = this.checked;
             var endInput = item.querySelector('[data-field="end_date"]');
+            var endGroup = item.querySelector('.end-date-group');
+            var dateRow = item.querySelector('.date-row');
             if (this.checked) {
                 state.data.experience[index].end_date = 'Present';
                 endInput.value = 'Present';
                 endInput.disabled = true;
+                endGroup.style.display = 'none';
+                dateRow.classList.add('end-date-hidden');
             } else {
                 state.data.experience[index].end_date = '';
                 endInput.value = '';
                 endInput.disabled = false;
+                endGroup.style.display = '';
+                dateRow.classList.remove('end-date-hidden');
             }
             notifyChange();
         });
