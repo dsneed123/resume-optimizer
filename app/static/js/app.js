@@ -3736,11 +3736,12 @@
     });
 
     // ── Export dropdown ──────────────────────────
-    var exportDropdown  = document.getElementById('exportDropdown');
-    var exportBtn       = document.getElementById('exportBtn');
-    var exportMenu      = document.getElementById('exportMenu');
-    var exportPdfBtn    = document.getElementById('exportPdfBtn');
-    var exportDocxBtn   = document.getElementById('exportDocxBtn');
+    var exportDropdown    = document.getElementById('exportDropdown');
+    var exportBtn         = document.getElementById('exportBtn');
+    var exportMenu        = document.getElementById('exportMenu');
+    var exportPdfBtn      = document.getElementById('exportPdfBtn');
+    var exportDocxBtn     = document.getElementById('exportDocxBtn');
+    var copyPlainTextBtn  = document.getElementById('copyPlainTextBtn');
     var exportPdfSpinner  = document.getElementById('exportPdfSpinner');
     var exportDocxSpinner = document.getElementById('exportDocxSpinner');
 
@@ -3825,6 +3826,124 @@
 
     if (exportDocxBtn) {
         exportDocxBtn.addEventListener('click', function () { doExport('docx'); });
+    }
+
+    function buildPlainText(data) {
+        var lines = [];
+        var h = data.header || {};
+
+        if (h.name) lines.push(h.name);
+        var contact = [h.email, h.phone, h.location, h.linkedin, h.website].filter(Boolean);
+        if (contact.length) lines.push(contact.join(' | '));
+        if (lines.length) lines.push('');
+
+        var sectionOrder = (data.section_order && data.section_order.length)
+            ? data.section_order
+            : ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'awards'];
+
+        sectionOrder.forEach(function (section) {
+            if (section === 'summary' && data.summary) {
+                lines.push('SUMMARY');
+                lines.push(data.summary);
+                lines.push('');
+            } else if (section === 'experience' && data.experience && data.experience.length) {
+                lines.push('EXPERIENCE');
+                data.experience.forEach(function (exp) {
+                    if (!exp.company && !exp.title) return;
+                    var header = [exp.title, exp.company].filter(Boolean).join(' — ');
+                    var meta = [exp.location, [exp.start_date, exp.end_date].filter(Boolean).join(' – ')].filter(Boolean).join(' | ');
+                    if (header) lines.push(header);
+                    if (meta) lines.push(meta);
+                    if (exp.bullets && exp.bullets.length) {
+                        exp.bullets.forEach(function (b) {
+                            var text = typeof b === 'string' ? b : (b.text || '');
+                            if (text) lines.push('• ' + text.replace(/\*\*/g, '').replace(/\*/g, ''));
+                        });
+                    }
+                    lines.push('');
+                });
+            } else if (section === 'education' && data.education && data.education.length) {
+                lines.push('EDUCATION');
+                data.education.forEach(function (edu) {
+                    if (!edu.school && !edu.degree) return;
+                    var degree = [edu.degree, edu.field].filter(Boolean).join(', ');
+                    if (edu.school) lines.push(edu.school);
+                    if (degree) lines.push(degree);
+                    var meta = [edu.graduation_date, edu.gpa ? 'GPA: ' + edu.gpa : '', edu.honors].filter(Boolean).join(' | ');
+                    if (meta) lines.push(meta);
+                    lines.push('');
+                });
+            } else if (section === 'skills' && data.skills && data.skills.length) {
+                lines.push('SKILLS');
+                data.skills.forEach(function (skill) {
+                    if (!skill.category && !(skill.items && skill.items.length)) return;
+                    var items = Array.isArray(skill.items) ? skill.items.join(', ') : '';
+                    if (skill.category && items) lines.push(skill.category + ': ' + items);
+                    else if (items) lines.push(items);
+                    else if (skill.category) lines.push(skill.category);
+                });
+                lines.push('');
+            } else if (section === 'projects' && data.projects && data.projects.length) {
+                lines.push('PROJECTS');
+                data.projects.forEach(function (proj) {
+                    if (!proj.name && !proj.description) return;
+                    if (proj.name) lines.push(proj.name + (proj.technologies ? ' | ' + proj.technologies : ''));
+                    if (proj.description) lines.push(proj.description);
+                    if (proj.url) lines.push(proj.url);
+                    lines.push('');
+                });
+            } else if (section === 'certifications' && data.certifications && data.certifications.length) {
+                lines.push('CERTIFICATIONS');
+                data.certifications.forEach(function (cert) {
+                    if (!cert.name) return;
+                    var meta = [cert.issuer, cert.date].filter(Boolean).join(', ');
+                    lines.push(cert.name + (meta ? ' — ' + meta : ''));
+                });
+                lines.push('');
+            } else if (section === 'awards' && data.awards && data.awards.length) {
+                lines.push('AWARDS');
+                data.awards.forEach(function (award) {
+                    if (!award.name) return;
+                    var meta = [award.issuer, award.date].filter(Boolean).join(', ');
+                    lines.push(award.name + (meta ? ' — ' + meta : ''));
+                    if (award.description) lines.push(award.description);
+                });
+                lines.push('');
+            }
+        });
+
+        return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    function copyPlainText() {
+        closeExportMenu();
+        var text = buildPlainText(state.data);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+                showToast('Copied to clipboard', 'success');
+            }).catch(function () {
+                showToast('Failed to copy to clipboard', 'error');
+            });
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast('Copied to clipboard', 'success');
+            } catch (e) {
+                showToast('Failed to copy to clipboard', 'error');
+            }
+            document.body.removeChild(ta);
+        }
+    }
+
+    if (copyPlainTextBtn) {
+        copyPlainTextBtn.addEventListener('click', copyPlainText);
     }
 
     var printBtn = document.getElementById('printBtn');
