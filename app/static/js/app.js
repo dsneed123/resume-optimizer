@@ -793,6 +793,7 @@
     function initSectionCollapsibility() {
         document.querySelectorAll('.sidebar-section').forEach(initPanelCollapsibility);
         updateSectionBadges();
+        updateStatsPanel();
     }
 
     function getSectionMeta(key) {
@@ -1082,6 +1083,82 @@
         });
     }
 
+    function updateStatsPanel() {
+        var texts = [];
+        var d = state.data;
+
+        if (d.summary) texts.push(d.summary);
+
+        (d.experience || []).forEach(function (exp) {
+            if (exp.company) texts.push(exp.company);
+            if (exp.title) texts.push(exp.title);
+            if (exp.location) texts.push(exp.location);
+            (exp.bullets || []).forEach(function (b) { if (b) texts.push(b); });
+        });
+
+        (d.education || []).forEach(function (edu) {
+            if (edu.school) texts.push(edu.school);
+            if (edu.degree) texts.push(edu.degree);
+            if (edu.field) texts.push(edu.field);
+        });
+
+        (d.skills || []).forEach(function (sk) {
+            if (sk.category) texts.push(sk.category);
+            (sk.items || []).forEach(function (item) { if (item) texts.push(item); });
+        });
+
+        (d.projects || []).forEach(function (proj) {
+            if (proj.name) texts.push(proj.name);
+            if (proj.description) texts.push(proj.description);
+        });
+
+        (d.certifications || []).forEach(function (cert) {
+            if (cert.name) texts.push(cert.name);
+        });
+
+        (d.awards || []).forEach(function (award) {
+            if (award.name) texts.push(award.name);
+            if (award.description) texts.push(award.description);
+        });
+
+        (d.custom_sections || []).forEach(function (cs) {
+            if (cs.title) texts.push(cs.title);
+            (cs.bullets || []).forEach(function (b) { if (b) texts.push(b); });
+        });
+
+        var fullText = texts.join(' ');
+        var wordCount = fullText.trim() ? fullText.trim().split(/\s+/).length : 0;
+        var charCount = fullText.replace(/\s+/g, '').length;
+
+        var bulletCount = 0;
+        (d.experience || []).forEach(function (exp) {
+            bulletCount += (exp.bullets || []).filter(function (b) { return b && b.trim(); }).length;
+        });
+        (d.projects || []).forEach(function (proj) {
+            bulletCount += (proj.bullets || []).filter(function (b) { return b && b.trim(); }).length;
+        });
+        (d.custom_sections || []).forEach(function (cs) {
+            bulletCount += (cs.bullets || []).filter(function (b) { return b && b.trim(); }).length;
+        });
+
+        var skillCount = 0;
+        (d.skills || []).forEach(function (sk) {
+            skillCount += (sk.items || []).filter(function (item) { return item && item.trim(); }).length;
+        });
+
+        var statWords = document.getElementById('statWords');
+        var statChars = document.getElementById('statChars');
+        var statBullets = document.getElementById('statBullets');
+        var statExperience = document.getElementById('statExperience');
+        var statSkills = document.getElementById('statSkills');
+
+        if (statWords) statWords.textContent = wordCount;
+        if (statChars) statChars.textContent = charCount;
+        if (statBullets) statBullets.textContent = bulletCount;
+        if (statExperience) statExperience.textContent = (d.experience || []).length;
+        if (statSkills) statSkills.textContent = skillCount;
+    }
+
     function notifyChange() {
         preview.update(state.data, state.typo);
         schedulePageCheck();
@@ -1089,6 +1166,7 @@
         scheduleAtsRefresh();
         updateSectionBadges();
         updateToolbarTitle();
+        updateStatsPanel();
     }
 
     // ── Undo/Redo History ────────────────────────
