@@ -4,6 +4,25 @@ from typing import Optional
 
 _STANDARD_SECTIONS = {'experience', 'education', 'skills'}
 
+_ACTION_VERBS = frozenset({
+    'accelerated', 'achieved', 'administered', 'advanced', 'analyzed',
+    'architected', 'automated', 'built', 'championed', 'collaborated',
+    'communicated', 'completed', 'conducted', 'configured', 'consolidated',
+    'contributed', 'coordinated', 'created', 'cut', 'debugged', 'defined',
+    'delivered', 'deployed', 'designed', 'developed', 'directed', 'drove',
+    'engineered', 'established', 'evaluated', 'executed', 'expanded',
+    'facilitated', 'generated', 'guided', 'identified', 'implemented',
+    'improved', 'increased', 'initiated', 'integrated', 'launched', 'led',
+    'maintained', 'managed', 'mentored', 'migrated', 'modernized', 'monitored',
+    'negotiated', 'optimized', 'orchestrated', 'owned', 'partnered', 'performed',
+    'planned', 'produced', 'provided', 'reduced', 'refactored', 'researched',
+    'resolved', 'reviewed', 'scaled', 'shipped', 'simplified', 'solved',
+    'spearheaded', 'streamlined', 'supported', 'tested', 'trained',
+    'transformed', 'updated', 'wrote',
+})
+
+_HAS_METRIC_RE = re.compile(r'\d')
+
 _SECTION_HEADING_RE = re.compile(
     r'^(work\s+)?experience|employment(\s+history)?|professional\s+background'
     r'|education(\s+&\s+training)?|academic\s+background'
@@ -254,6 +273,49 @@ def _check_experience_bullets(resume_data: dict) -> tuple[bool, list[str]]:
     return len(issues) == 0, issues
 
 
+def _check_bullet_quality(resume_data: dict) -> tuple[bool, list[str]]:
+    """Flag weak bullets: no action verb, too short/long, or lacking measurable results."""
+    issues = []
+    for i, exp in enumerate(resume_data.get("experience", [])):
+        if not isinstance(exp, dict):
+            continue
+        company = exp.get("company") or f"entry {i}"
+        bullets = exp.get("bullets", [])
+        if not isinstance(bullets, list):
+            continue
+        for bullet in bullets:
+            if not isinstance(bullet, str):
+                continue
+            text = bullet.strip()
+            if not text:
+                continue
+            words = text.split()
+            if len(words) < 5:
+                issues.append(
+                    f"Bullet at '{company}' is too short ({len(words)} words). "
+                    "Expand with specific accomplishments and context."
+                )
+                continue
+            if len(words) > 25:
+                issues.append(
+                    f"Bullet at '{company}' is too long ({len(words)} words). "
+                    "Consider splitting into two focused statements."
+                )
+            first_word = re.sub(r'[^a-zA-Z]', '', words[0]).lower()
+            if first_word not in _ACTION_VERBS:
+                issues.append(
+                    f"Bullet at '{company}' does not start with an action verb "
+                    f"(starts with '{words[0]}'). "
+                    "Begin with a strong verb (e.g., 'Led', 'Built', 'Reduced')."
+                )
+            if not _HAS_METRIC_RE.search(text):
+                issues.append(
+                    f"Bullet at '{company}' lacks quantifiable results. "
+                    "Add numbers or percentages to show impact (e.g., 'reduced latency by 40%')."
+                )
+    return len(issues) == 0, issues
+
+
 def _check_date_consistency(resume_data: dict) -> tuple[bool, list[str]]:
     """Flag overlapping dates, gaps > 6 months, and future dates (except Expected graduation)."""
     issues = []
@@ -385,6 +447,12 @@ def analyze_ats_score(resume_data: dict) -> dict:
     if not passed:
         all_issues.extend(date_consistency_issues)
         penalty += 3 * len(date_consistency_issues)
+
+    # -2 per weak bullet
+    passed, bullet_quality_issues = _check_bullet_quality(resume_data)
+    if not passed:
+        all_issues.extend(bullet_quality_issues)
+        penalty += 2 * len(bullet_quality_issues)
 
     score = max(0, 100 - penalty)
     return {"score": score, "issues": all_issues}
