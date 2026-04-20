@@ -731,6 +731,26 @@ body {
     field-sizing: content;
 }
 
+.field-input--error {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+}
+
+.field-input--error:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.12);
+}
+
+.field-error {
+    font-size: 11px;
+    color: #dc2626;
+    line-height: 1.3;
+}
+
+.field-error:empty {
+    display: none;
+}
+
 /* Character count */
 .char-count {
     font-size: 11px;

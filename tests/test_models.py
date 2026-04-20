@@ -256,3 +256,111 @@ def test_validate_resume_no_education_no_errors():
 
 def test_validate_resume_returns_list():
     assert isinstance(validate_resume(_valid_resume()), list)
+
+
+def test_validate_resume_invalid_experience_start_date():
+    data = _valid_resume()
+    data["experience"][0]["start_date"] = "not-a-date"
+    errors = validate_resume(data)
+    assert any("experience[0].start_date" in e for e in errors)
+
+
+def test_validate_resume_valid_experience_start_date_year():
+    data = _valid_resume()
+    data["experience"][0]["start_date"] = "Jan 2020"
+    assert validate_resume(data) == []
+
+
+def test_validate_resume_invalid_experience_end_date():
+    data = _valid_resume()
+    data["experience"][0]["end_date"] = "baddate"
+    errors = validate_resume(data)
+    assert any("experience[0].end_date" in e for e in errors)
+
+
+def test_validate_resume_present_end_date_is_valid():
+    data = _valid_resume()
+    data["experience"][0]["end_date"] = "Present"
+    assert validate_resume(data) == []
+
+
+def test_validate_resume_invalid_education_graduation_date():
+    data = _valid_resume()
+    data["education"][0]["graduation_date"] = "not-a-date"
+    errors = validate_resume(data)
+    assert any("education[0].graduation_date" in e for e in errors)
+
+
+def test_validate_resume_valid_education_graduation_date():
+    data = _valid_resume()
+    data["education"][0]["graduation_date"] = "May 2022"
+    assert validate_resume(data) == []
+
+
+def test_validate_resume_invalid_certification_date():
+    data = _valid_resume()
+    data["certifications"][0]["date"] = "not-a-date"
+    errors = validate_resume(data)
+    assert any("certifications[0].date" in e for e in errors)
+
+
+def test_validate_resume_valid_certification_date():
+    data = _valid_resume()
+    data["certifications"][0]["date"] = "June 2023"
+    assert validate_resume(data) == []
+
+
+def test_validate_resume_invalid_project_url():
+    data = _valid_resume()
+    data["projects"][0]["url"] = "not a url"
+    errors = validate_resume(data)
+    assert any("projects[0].url" in e for e in errors)
+
+
+def test_validate_resume_valid_project_url():
+    data = _valid_resume()
+    data["projects"][0]["url"] = "https://github.com/user/project"
+    assert validate_resume(data) == []
+
+
+def test_validate_resume_empty_project_url_no_error():
+    data = _valid_resume()
+    data["projects"][0]["url"] = ""
+    assert validate_resume(data) == []
+
+
+def test_validate_resume_invalid_award_date():
+    data = _valid_resume()
+    data["awards"][0]["date"] = "not-a-date"
+    errors = validate_resume(data)
+    assert any("awards[0].date" in e for e in errors)
+
+
+def test_validate_resume_valid_award_date():
+    data = _valid_resume()
+    data["awards"][0]["date"] = "2021"
+    assert validate_resume(data) == []
+
+
+def test_validate_resume_no_sections_returns_error():
+    data = _valid_resume()
+    data["experience"] = []
+    data["education"] = []
+    data["skills"] = []
+    data["certifications"] = []
+    data["projects"] = []
+    data["awards"] = []
+    errors = validate_resume(data)
+    assert any("at least one resume section" in e for e in errors)
+
+
+def test_validate_resume_one_section_populated_no_section_error():
+    data = _valid_resume()
+    data["experience"] = []
+    data["education"] = []
+    data["skills"] = [{"category": "Languages", "items": ["Python"]}]
+    data["certifications"] = []
+    data["projects"] = []
+    data["awards"] = []
+    errors = validate_resume(data)
+    assert not any("at least one resume section" in e for e in errors)
