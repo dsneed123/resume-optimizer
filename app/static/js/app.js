@@ -279,7 +279,7 @@
 
             // Certifications
             const certs = (d.certifications || []).filter(c => c.name);
-            if (certs.length) {
+            if (certs.length && d.show_certifications !== false) {
                 html += '<div class="rv-section">';
                 html += '<div class="rv-section-title">Certifications</div>';
                 for (const c of certs) {
@@ -332,6 +332,7 @@
             education: [],
             skills: [],
             certifications: [],
+            show_certifications: true,
             projects: [],
             awards: [],
         };
@@ -976,4 +977,163 @@
     }
 
     renderSkillList();
+
+    // ── Certifications section ────────────────────────
+    var certOpenStates = [];
+
+    function newCertEntry() {
+        return { name: '', issuer: '', date: '' };
+    }
+
+    function buildCertItem(entry, index) {
+        var item = document.createElement('div');
+        item.className = 'cert-item' + (certOpenStates[index] === false ? ' collapsed' : '');
+        item.dataset.index = String(index);
+        item.draggable = true;
+
+        var label = entry.name || 'New Certification';
+        var chevron = certOpenStates[index] === false ? '▸' : '▾';
+
+        item.innerHTML =
+            '<div class="cert-item-header">' +
+                '<span class="drag-handle" title="Drag to reorder">⠿</span>' +
+                '<span class="cert-item-label">' + escHtml(label) + '</span>' +
+                '<div class="cert-item-actions">' +
+                    '<button class="cert-toggle-btn" title="Expand/collapse">' + chevron + '</button>' +
+                    '<button class="cert-delete-btn" title="Delete entry">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="cert-item-body">' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Certification Name</label>' +
+                    '<input class="field-input cert-field" data-field="name" type="text" value="' + escHtml(entry.name) + '" placeholder="AWS Certified Solutions Architect">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Issuing Organization</label>' +
+                    '<input class="field-input cert-field" data-field="issuer" type="text" value="' + escHtml(entry.issuer) + '" placeholder="Amazon Web Services">' +
+                '</div>' +
+                '<div class="field-group">' +
+                    '<label class="field-label">Date</label>' +
+                    '<input class="field-input cert-field" data-field="date" type="text" value="' + escHtml(entry.date) + '" placeholder="June 2023">' +
+                '</div>' +
+            '</div>';
+
+        var header = item.querySelector('.cert-item-header');
+        var toggleBtn = item.querySelector('.cert-toggle-btn');
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.cert-delete-btn') || e.target.closest('.drag-handle')) return;
+            var nowCollapsed = item.classList.toggle('collapsed');
+            certOpenStates[index] = !nowCollapsed;
+            toggleBtn.textContent = nowCollapsed ? '▸' : '▾';
+        });
+
+        item.querySelector('.cert-delete-btn').addEventListener('click', function () {
+            if (confirm('Delete this certification?')) {
+                state.data.certifications.splice(index, 1);
+                certOpenStates.splice(index, 1);
+                renderCertList();
+                notifyChange();
+            }
+        });
+
+        item.querySelectorAll('.cert-field').forEach(function (input) {
+            input.addEventListener('input', function () {
+                state.data.certifications[index][input.dataset.field] = input.value;
+                if (input.dataset.field === 'name') {
+                    item.querySelector('.cert-item-label').textContent = input.value || 'New Certification';
+                }
+                notifyChange();
+            });
+        });
+
+        return item;
+    }
+
+    function bindCertDragDrop() {
+        var listEl = document.getElementById('certsList');
+        if (!listEl) return;
+        var items = listEl.querySelectorAll('.cert-item');
+        var dragSrcIndex = null;
+
+        items.forEach(function (item) {
+            item.addEventListener('dragstart', function (e) {
+                dragSrcIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', function () {
+                item.classList.remove('dragging');
+                items.forEach(function (i) { i.classList.remove('drag-over'); });
+                dragSrcIndex = null;
+            });
+
+            item.addEventListener('dragover', function (e) {
+                if (dragSrcIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', function () {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', function (e) {
+                e.preventDefault();
+                var dropIndex = parseInt(item.dataset.index);
+                if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    var certs = state.data.certifications;
+                    var moved = certs.splice(dragSrcIndex, 1)[0];
+                    certs.splice(dropIndex, 0, moved);
+                    var openMoved = certOpenStates.splice(dragSrcIndex, 1)[0];
+                    certOpenStates.splice(dropIndex, 0, openMoved);
+                    renderCertList();
+                    notifyChange();
+                }
+                dragSrcIndex = null;
+            });
+        });
+    }
+
+    function renderCertList() {
+        var listEl = document.getElementById('certsList');
+        if (!listEl) return;
+
+        if (!state.data.certifications.length) {
+            listEl.innerHTML = '<p class="empty-state">No certifications added yet.</p>';
+            return;
+        }
+
+        while (certOpenStates.length < state.data.certifications.length) certOpenStates.push(true);
+        certOpenStates.length = state.data.certifications.length;
+
+        listEl.innerHTML = '';
+        state.data.certifications.forEach(function (entry, index) {
+            listEl.appendChild(buildCertItem(entry, index));
+        });
+
+        bindCertDragDrop();
+    }
+
+    var certsVisibleEl = document.getElementById('certsVisible');
+    if (certsVisibleEl) {
+        certsVisibleEl.addEventListener('change', function () {
+            state.data.show_certifications = certsVisibleEl.checked;
+            notifyChange();
+        });
+    }
+
+    var addCertBtn = document.getElementById('addCert');
+    if (addCertBtn) {
+        addCertBtn.addEventListener('click', function () {
+            state.data.certifications.push(newCertEntry());
+            certOpenStates.push(true);
+            renderCertList();
+            notifyChange();
+        });
+    }
+
+    renderCertList();
 })();
