@@ -25,7 +25,7 @@
   /* ── Header ── */
   .header {
     text-align: center;
-    margin-bottom: {{ t.section_spacing }}pt;
+    margin-bottom: 4pt;
   }
 
   .header .name {
@@ -45,6 +45,13 @@
     color: #999;
   }
 
+  .header-rule {
+    border: none;
+    border-top: 1pt solid #000;
+    margin-top: 5pt;
+    margin-bottom: {{ t.section_spacing }}pt;
+  }
+
   /* ── Section ── */
   .section {
     margin-bottom: {{ t.section_spacing }}pt;
@@ -55,7 +62,7 @@
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.5pt;
-    border-bottom: 1pt solid #000;
+    border-bottom: 0.5pt solid #000;
     padding-bottom: 1pt;
     margin-bottom: 4pt;
   }
@@ -71,9 +78,12 @@
     align-items: baseline;
   }
 
+  .entry-left {
+    font-size: {{ t.font_size_body }}pt;
+  }
+
   .entry-title {
     font-weight: bold;
-    font-size: {{ t.font_size_body }}pt;
   }
 
   .entry-date {
@@ -87,11 +97,6 @@
     font-size: {{ t.font_size_detail }}pt;
     color: #444;
     margin-bottom: 2pt;
-  }
-
-  .entry-subtitle .location::before {
-    content: " — ";
-    color: #999;
   }
 
   /* ── Bullets ── */
@@ -127,7 +132,7 @@
     font-weight: bold;
   }
 
-  /* ── Certifications ── */
+  /* ── Certifications / Awards ── */
   .cert-entry {
     margin-bottom: {{ t.paragraph_spacing }}pt;
   }
@@ -156,33 +161,35 @@
       {% if data.header.website %}<span>{{ data.header.website }}</span>{% endif %}
     </div>
   </div>
+  <hr class="header-rule">
 
-  <!-- Summary -->
-  {% if data.summary %}
+  <!-- Sections rendered in user-defined order -->
+  {% for section in data.section_order %}
+
+  {% if section == 'summary' and data.summary %}
   <div class="section">
     <div class="section-title">Summary</div>
     <div class="summary">{{ data.summary }}</div>
   </div>
   {% endif %}
 
-  <!-- Experience -->
-  {% if data.experience %}
+  {% if section == 'experience' and data.experience %}
   <div class="section">
     <div class="section-title">Experience</div>
     {% for exp in data.experience %}
     {% if exp.company or exp.title %}
     <div class="entry">
       <div class="entry-header">
-        <span class="entry-title">{{ exp.title }}</span>
+        <span class="entry-left">
+          <span class="entry-title">{{ exp.title }}</span>
+          {% if exp.company %} | {{ exp.company }}{% endif %}
+          {% if exp.location %} · {{ exp.location }}{% endif %}
+        </span>
         <span class="entry-date">
           {% if exp.start_date %}{{ exp.start_date }}{% endif %}
           {% if exp.start_date and exp.end_date %} – {% endif %}
           {% if exp.end_date %}{{ exp.end_date }}{% endif %}
         </span>
-      </div>
-      <div class="entry-subtitle">
-        {{ exp.company }}
-        {% if exp.location %}<span class="location">{{ exp.location }}</span>{% endif %}
       </div>
       {% if exp.bullets %}
       <ul class="bullets">
@@ -197,32 +204,34 @@
   </div>
   {% endif %}
 
-  <!-- Education -->
-  {% if data.education %}
+  {% if section == 'education' and data.education %}
   <div class="section">
     <div class="section-title">Education</div>
     {% for edu in data.education %}
     {% if edu.school %}
     <div class="entry">
       <div class="entry-header">
-        <span class="entry-title">{{ edu.school }}</span>
+        <span class="entry-left">
+          <span class="entry-title">{{ edu.school }}</span>
+          {% if edu.degree %} · {{ edu.degree }}{% endif %}
+          {% if edu.field %}, {{ edu.field }}{% endif %}
+        </span>
         <span class="entry-date">{% if edu.graduation_date %}{{ edu.graduation_date }}{% endif %}</span>
       </div>
+      {% if edu.gpa or edu.honors %}
       <div class="entry-subtitle">
-        {% if edu.degree %}{{ edu.degree }}{% endif %}
-        {% if edu.degree and edu.field %}, {% endif %}
-        {% if edu.field %}{{ edu.field }}{% endif %}
-        {% if edu.gpa %} · GPA: {{ edu.gpa }}{% endif %}
-        {% if edu.honors %} · {{ edu.honors }}{% endif %}
+        {% if edu.gpa %}GPA: {{ edu.gpa }}{% endif %}
+        {% if edu.gpa and edu.honors %} · {% endif %}
+        {% if edu.honors %}{{ edu.honors }}{% endif %}
       </div>
+      {% endif %}
     </div>
     {% endif %}
     {% endfor %}
   </div>
   {% endif %}
 
-  <!-- Skills -->
-  {% if data.skills %}
+  {% if section == 'skills' and data.skills %}
   <div class="section">
     <div class="section-title">Skills</div>
     <div class="skills-grid">
@@ -238,20 +247,17 @@
   </div>
   {% endif %}
 
-  <!-- Projects -->
-  {% if data.projects %}
+  {% if section == 'projects' and data.projects %}
   <div class="section">
     <div class="section-title">Projects</div>
     {% for proj in data.projects %}
     {% if proj.name %}
     <div class="entry">
       <div class="entry-header">
-        <span class="entry-title">{{ proj.name }}</span>
+        <span class="entry-left"><span class="entry-title">{{ proj.name }}</span>
+        {% if proj.technologies %} · {{ proj.technologies }}{% endif %}</span>
         {% if proj.url %}<span class="entry-date">{{ proj.url }}</span>{% endif %}
       </div>
-      {% if proj.technologies %}
-      <div class="entry-subtitle">{{ proj.technologies }}</div>
-      {% endif %}
       {% if proj.description %}
       <div style="font-size: {{ t.font_size_body }}pt; margin-top: 2pt;">{{ proj.description }}</div>
       {% endif %}
@@ -261,8 +267,7 @@
   </div>
   {% endif %}
 
-  <!-- Certifications -->
-  {% if data.certifications %}
+  {% if section == 'certifications' and data.certifications %}
   <div class="section">
     <div class="section-title">Certifications</div>
     {% for cert in data.certifications %}
@@ -279,18 +284,17 @@
   </div>
   {% endif %}
 
-  <!-- Awards -->
-  {% if data.awards %}
+  {% if section == 'awards' and data.awards %}
   <div class="section">
     <div class="section-title">Awards</div>
     {% for award in data.awards %}
     {% if award.name %}
     <div class="entry">
       <div class="entry-header">
-        <span class="entry-title">{{ award.name }}</span>
+        <span class="entry-left"><span class="entry-title">{{ award.name }}</span>
+        {% if award.issuer %} | {{ award.issuer }}{% endif %}</span>
         {% if award.date %}<span class="entry-date">{{ award.date }}</span>{% endif %}
       </div>
-      {% if award.issuer %}<div class="entry-subtitle">{{ award.issuer }}</div>{% endif %}
       {% if award.description %}
       <div style="font-size: {{ t.font_size_body }}pt; margin-top: 2pt;">{{ award.description }}</div>
       {% endif %}
@@ -299,6 +303,8 @@
     {% endfor %}
   </div>
   {% endif %}
+
+  {% endfor %}
 
 </body>
 </html>
