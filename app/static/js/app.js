@@ -448,6 +448,99 @@
         scheduleSave();
     }
 
+    // ── Undo/Redo History ────────────────────────
+    var historyStack = [];
+    var redoStack = [];
+    var MAX_HISTORY = 50;
+    var undoBtnEl = document.getElementById('undoBtn');
+    var redoBtnEl = document.getElementById('redoBtn');
+
+    function updateUndoRedoButtons() {
+        if (undoBtnEl) undoBtnEl.disabled = historyStack.length === 0;
+        if (redoBtnEl) redoBtnEl.disabled = redoStack.length === 0;
+    }
+
+    function pushHistory() {
+        var snapshot = JSON.stringify({ data: state.data, typo: state.typo });
+        if (historyStack.length > 0 && historyStack[historyStack.length - 1] === snapshot) return;
+        historyStack.push(snapshot);
+        if (historyStack.length > MAX_HISTORY) historyStack.shift();
+        redoStack.length = 0;
+        updateUndoRedoButtons();
+    }
+
+    function applyHistoryState(snapshot) {
+        var parsed = JSON.parse(snapshot);
+        state.data = parsed.data;
+        state.typo = parsed.typo;
+
+        expOpenStates.length = 0;
+        eduOpenStates.length = 0;
+        skillOpenStates.length = 0;
+        certOpenStates.length = 0;
+        projOpenStates.length = 0;
+        awardOpenStates.length = 0;
+
+        var h = state.data.header || {};
+        ['name', 'email', 'phone', 'location', 'linkedin', 'website'].forEach(function (f) {
+            var el = document.getElementById(f);
+            if (el) el.value = h[f] || '';
+        });
+        if (summaryEl) summaryEl.value = state.data.summary || '';
+        updateCharCount();
+        if (summaryVisibleEl) summaryVisibleEl.checked = !!state.data.show_summary;
+        var certsVisEl = document.getElementById('certsVisible');
+        if (certsVisEl) certsVisEl.checked = state.data.show_certifications !== false;
+        var projVisEl = document.getElementById('projectsVisible');
+        if (projVisEl) projVisEl.checked = state.data.show_projects !== false;
+        var awardsVisEl = document.getElementById('awardsVisible');
+        if (awardsVisEl) awardsVisEl.checked = state.data.show_awards !== false;
+
+        applyTypoToControls(state.typo);
+        renderSidebarNav();
+        renderExperienceList();
+        renderEducationList();
+        renderSkillList();
+        renderCertList();
+        renderProjectList();
+        renderAwardList();
+        notifyChange();
+    }
+
+    function undo() {
+        if (historyStack.length === 0) return;
+        var currentSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+        redoStack.push(currentSnapshot);
+        applyHistoryState(historyStack.pop());
+        updateUndoRedoButtons();
+    }
+
+    function redo() {
+        if (redoStack.length === 0) return;
+        var currentSnapshot = JSON.stringify({ data: state.data, typo: state.typo });
+        historyStack.push(currentSnapshot);
+        applyHistoryState(redoStack.pop());
+        updateUndoRedoButtons();
+    }
+
+    // ── Undo/Redo button wiring ──────────────────
+    if (undoBtnEl) undoBtnEl.addEventListener('click', undo);
+    if (redoBtnEl) redoBtnEl.addEventListener('click', redo);
+
+    document.addEventListener('keydown', function (e) {
+        var mod = e.metaKey || e.ctrlKey;
+        if (!mod) return;
+        if (e.key === 'z' || e.key === 'Z') {
+            if (e.shiftKey) {
+                e.preventDefault();
+                redo();
+            } else {
+                e.preventDefault();
+                undo();
+            }
+        }
+    });
+
     // ── Sidebar nav (dynamic, ordered by section_order) ─────────────────
     function renderSidebarNav() {
         var nav = document.getElementById('sidebarNav');
@@ -543,6 +636,7 @@
                     var srcIdx = order.indexOf(dragSrcKey);
                     var dstIdx = order.indexOf(dstKey);
                     if (srcIdx !== -1 && dstIdx !== -1) {
+                        pushHistory();
                         var moved = order.splice(srcIdx, 1)[0];
                         order.splice(dstIdx, 0, moved);
                         renderSidebarNav();
@@ -555,6 +649,26 @@
     }
 
     renderSidebarNav();
+
+    // ── History capture via sidebar event delegation ─────────────────────
+    var sidebarEl = document.getElementById('sidebar');
+    if (sidebarEl) {
+        sidebarEl.addEventListener('focusin', function (e) {
+            var tag = e.target.tagName;
+            var type = (e.target.type || '').toLowerCase();
+            if ((tag === 'INPUT' && type !== 'range' && type !== 'checkbox') ||
+                tag === 'TEXTAREA' || tag === 'SELECT') {
+                pushHistory();
+            }
+        });
+        sidebarEl.addEventListener('mousedown', function (e) {
+            var tag = e.target.tagName;
+            var type = (e.target.type || '').toLowerCase();
+            if (tag === 'INPUT' && (type === 'range' || type === 'checkbox')) {
+                pushHistory();
+            }
+        });
+    }
 
     // ── Form bindings — contact ──────────────────
     function bindField(id, path) {
@@ -690,6 +804,7 @@
 
         item.querySelector('.exp-delete-btn').addEventListener('click', function () {
             if (confirm('Delete this experience entry?')) {
+                pushHistory();
                 state.data.experience.splice(index, 1);
                 expOpenStates.splice(index, 1);
                 renderExperienceList();
@@ -739,12 +854,14 @@
 
             if (removeBtn) {
                 bi = parseInt(removeBtn.dataset.bi);
+                pushHistory();
                 bullets.splice(bi, 1);
                 bulletList.innerHTML = bullets.map(buildBulletHTML).join('');
                 notifyChange();
             } else if (upBtn) {
                 bi = parseInt(upBtn.dataset.bi);
                 if (bi > 0) {
+                    pushHistory();
                     tmp = bullets[bi - 1];
                     bullets[bi - 1] = bullets[bi];
                     bullets[bi] = tmp;
@@ -754,6 +871,7 @@
             } else if (downBtn) {
                 bi = parseInt(downBtn.dataset.bi);
                 if (bi < bullets.length - 1) {
+                    pushHistory();
                     tmp = bullets[bi];
                     bullets[bi] = bullets[bi + 1];
                     bullets[bi + 1] = tmp;
@@ -764,6 +882,7 @@
         });
 
         item.querySelector('.add-bullet-btn').addEventListener('click', function () {
+            pushHistory();
             state.data.experience[index].bullets.push('');
             bulletList.innerHTML = state.data.experience[index].bullets.map(buildBulletHTML).join('');
             notifyChange();
@@ -808,6 +927,7 @@
                 e.preventDefault();
                 var dropIndex = parseInt(item.dataset.index);
                 if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    pushHistory();
                     var exp = state.data.experience;
                     var moved = exp.splice(dragSrcIndex, 1)[0];
                     exp.splice(dropIndex, 0, moved);
@@ -844,6 +964,7 @@
     var addExpBtn = document.getElementById('addExperience');
     if (addExpBtn) {
         addExpBtn.addEventListener('click', function () {
+            pushHistory();
             state.data.experience.push(newExperienceEntry());
             expOpenStates.push(true);
             renderExperienceList();
@@ -917,6 +1038,7 @@
 
         item.querySelector('.edu-delete-btn').addEventListener('click', function () {
             if (confirm('Delete this education entry?')) {
+                pushHistory();
                 state.data.education.splice(index, 1);
                 eduOpenStates.splice(index, 1);
                 renderEducationList();
@@ -971,6 +1093,7 @@
                 e.preventDefault();
                 var dropIndex = parseInt(item.dataset.index);
                 if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                    pushHistory();
                     var edu = state.data.education;
                     var moved = edu.splice(dragSrcIndex, 1)[0];
                     edu.splice(dropIndex, 0, moved);
@@ -1007,6 +1130,7 @@
     var addEduBtn = document.getElementById('addEducation');
     if (addEduBtn) {
         addEduBtn.addEventListener('click', function () {
+            pushHistory();
             state.data.education.push(newEducationEntry());
             eduOpenStates.push(true);
             renderEducationList();
@@ -1064,6 +1188,7 @@
 
         item.querySelector('.skill-delete-btn').addEventListener('click', function () {
             if (confirm('Delete this skill category?')) {
+                pushHistory();
                 state.data.skills.splice(index, 1);
                 skillOpenStates.splice(index, 1);
                 renderSkillList();
