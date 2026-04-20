@@ -160,6 +160,63 @@ body {
     animation: spin 0.7s linear infinite;
 }
 
+/* ── Keyboard shortcuts popover ─────────────────── */
+.shortcuts-wrap {
+    position: relative;
+}
+
+.toolbar-btn--icon {
+    padding: 5px 8px;
+}
+
+.shortcuts-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 10px 14px;
+    z-index: 300;
+    white-space: nowrap;
+}
+
+.shortcuts-popover-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+
+.shortcuts-table {
+    border-collapse: collapse;
+}
+
+.shortcuts-table tr + tr td {
+    padding-top: 5px;
+}
+
+.shortcut-key {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: #374151;
+    padding-right: 12px;
+    white-space: nowrap;
+}
+
+.shortcut-desc {
+    padding-left: 10px;
+    font-size: 12px;
+    color: #374151;
+}
+
 /* Save status */
 .save-status {
     font-size: 12px;

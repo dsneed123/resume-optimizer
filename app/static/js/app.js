@@ -527,20 +527,6 @@
     if (undoBtnEl) undoBtnEl.addEventListener('click', undo);
     if (redoBtnEl) redoBtnEl.addEventListener('click', redo);
 
-    document.addEventListener('keydown', function (e) {
-        var mod = e.metaKey || e.ctrlKey;
-        if (!mod) return;
-        if (e.key === 'z' || e.key === 'Z') {
-            if (e.shiftKey) {
-                e.preventDefault();
-                redo();
-            } else {
-                e.preventDefault();
-                undo();
-            }
-        }
-    });
-
     // ── Sidebar nav (dynamic, ordered by section_order) ─────────────────
     function renderSidebarNav() {
         var nav = document.getElementById('sidebarNav');
@@ -2073,10 +2059,6 @@
         });
     }
 
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && importModal && !importModal.hidden) closeImportModal();
-    });
-
     if (importBrowseBtn) {
         importBrowseBtn.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -2165,6 +2147,36 @@
                 });
         });
     }
+
+    // ── Shortcuts popover ────────────────────────
+    var shortcutsWrap    = document.getElementById('shortcutsWrap');
+    var shortcutsBtn     = document.getElementById('shortcutsBtn');
+    var shortcutsPopover = document.getElementById('shortcutsPopover');
+
+    function openShortcutsPopover() {
+        if (shortcutsPopover) shortcutsPopover.hidden = false;
+    }
+
+    function closeShortcutsPopover() {
+        if (shortcutsPopover) shortcutsPopover.hidden = true;
+    }
+
+    if (shortcutsBtn) {
+        shortcutsBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (shortcutsPopover && shortcutsPopover.hidden) {
+                openShortcutsPopover();
+            } else {
+                closeShortcutsPopover();
+            }
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (shortcutsWrap && !shortcutsWrap.contains(e.target)) {
+            closeShortcutsPopover();
+        }
+    });
 
     // ── Export dropdown ──────────────────────────
     var exportDropdown  = document.getElementById('exportDropdown');
@@ -2263,10 +2275,6 @@
         }
     });
 
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && exportMenu && !exportMenu.hidden) closeExportMenu();
-    });
-
     // ── Auto-fit button ──────────────────────────
     if (autoFitBtn) {
         autoFitBtn.addEventListener('click', function () {
@@ -2297,6 +2305,38 @@
             });
         });
     }
+
+    // ── Unified keyboard shortcuts ───────────────
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (importModal && !importModal.hidden) closeImportModal();
+            if (exportMenu && !exportMenu.hidden) closeExportMenu();
+            if (shortcutsPopover && !shortcutsPopover.hidden) closeShortcutsPopover();
+            return;
+        }
+
+        var mod = e.metaKey || e.ctrlKey;
+        if (!mod) return;
+
+        if (e.key === 'z' || e.key === 'Z') {
+            e.preventDefault();
+            if (e.shiftKey) redo(); else undo();
+            return;
+        }
+
+        if (e.key === 's' || e.key === 'S') {
+            e.preventDefault();
+            clearTimeout(saveTimer);
+            doSave();
+            return;
+        }
+
+        if (e.key === 'p' || e.key === 'P') {
+            e.preventDefault();
+            doExport('pdf');
+            return;
+        }
+    });
 
     window.addEventListener('beforeunload', function () {
         if (!resumeId) return;

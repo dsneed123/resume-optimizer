@@ -44,6 +44,40 @@
                     </svg>
                     Import
                 </button>
+                <div class="shortcuts-wrap" id="shortcutsWrap">
+                    <button class="toolbar-btn toolbar-btn--icon" id="shortcutsBtn" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M6.5 6.25a1.5 1.5 0 112.5 1.125C8.5 7.75 8 8.25 8 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <circle cx="8" cy="11" r="0.75" fill="currentColor"/>
+                        </svg>
+                    </button>
+                    <div class="shortcuts-popover" id="shortcutsPopover" hidden>
+                        <div class="shortcuts-popover-title">Keyboard Shortcuts</div>
+                        <table class="shortcuts-table">
+                            <tr>
+                                <td class="shortcut-key">Ctrl+S / ⌘S</td>
+                                <td class="shortcut-desc">Force save</td>
+                            </tr>
+                            <tr>
+                                <td class="shortcut-key">Ctrl+P / ⌘P</td>
+                                <td class="shortcut-desc">Export PDF</td>
+                            </tr>
+                            <tr>
+                                <td class="shortcut-key">Ctrl+Z / ⌘Z</td>
+                                <td class="shortcut-desc">Undo</td>
+                            </tr>
+                            <tr>
+                                <td class="shortcut-key">Ctrl+Shift+Z / ⌘⇧Z</td>
+                                <td class="shortcut-desc">Redo</td>
+                            </tr>
+                            <tr>
+                                <td class="shortcut-key">Esc</td>
+                                <td class="shortcut-desc">Close modal</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
                 <div class="export-dropdown" id="exportDropdown">
                     <button class="toolbar-btn toolbar-btn--primary" id="exportBtn">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
