@@ -254,13 +254,17 @@
 
             const zoomInBtn = document.getElementById('zoomInBtn');
             const zoomOutBtn = document.getElementById('zoomOutBtn');
-            const zoomFitBtn = document.getElementById('zoomFitBtn');
+            const zoomFitWidthBtn = document.getElementById('zoomFitWidthBtn');
+            const zoomFitHeightBtn = document.getElementById('zoomFitHeightBtn');
 
             if (zoomInBtn) zoomInBtn.addEventListener('click', () => this._adjustZoom(0.1));
             if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => this._adjustZoom(-0.1));
-            if (zoomFitBtn) zoomFitBtn.addEventListener('click', () => {
+            if (zoomFitWidthBtn) zoomFitWidthBtn.addEventListener('click', () => {
                 this._zoom = null;
                 this._applyScale();
+            });
+            if (zoomFitHeightBtn) zoomFitHeightBtn.addEventListener('click', () => {
+                this._fitToHeight();
             });
 
             this.preview.addEventListener('wheel', (e) => {
@@ -275,8 +279,17 @@
             const available = this.preview.clientWidth - 64;
             const autoFit = (available > 0 && available < PAGE_W) ? available / PAGE_W : 1;
             const current = this._zoom !== null ? this._zoom : autoFit;
-            this._zoom = Math.min(3, Math.max(0.25, Math.round((current + delta) * 20) / 20));
+            this._zoom = Math.min(2, Math.max(0.5, Math.round((current + delta) * 20) / 20));
             this._applyScale();
+        }
+
+        _fitToHeight() {
+            const PAGE_H = 1056;
+            const availableH = this.preview.clientHeight - 64;
+            if (availableH > 0) {
+                this._zoom = Math.min(2, Math.max(0.5, availableH / PAGE_H));
+                this._applyScale();
+            }
         }
 
         _esc(str) {
